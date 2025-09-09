@@ -1,7 +1,7 @@
 import torch, os, json
-from functools import partial
-import rp
-debug_print = partial(rp.fansi_print, style="blue cyan italic")
+import sys
+sys.path.append("/root/CleanCode/Github/DiffSynth-Studio")
+from ryan_utils import debug_print
 from diffsynth import load_state_dict
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
 from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser

@@ -1,7 +1,5 @@
 import torch, warnings, glob, os, types
-from functools import partial
-import rp
-debug_print = partial(rp.fansi_print, style="blue cyan italic")
+from ryan_utils import debug_print
 import numpy as np
 from PIL import Image
 from einops import repeat, reduce

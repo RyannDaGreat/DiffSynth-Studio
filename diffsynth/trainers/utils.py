@@ -1,7 +1,5 @@
 import imageio, os, torch, warnings, torchvision, argparse, json
-from functools import partial
-import rp
-debug_print = partial(rp.fansi_print, style="blue cyan italic")
+from ryan_utils import debug_print
 from ..utils import ModelConfig
 from ..models.utils import load_state_dict
 from peft import LoraConfig, inject_adapter_in_model

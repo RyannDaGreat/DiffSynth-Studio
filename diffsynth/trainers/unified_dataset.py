@@ -1,7 +1,5 @@
 import torch, torchvision, imageio, os, json, pandas
-from functools import partial
-import rp
-debug_print = partial(rp.fansi_print, style="blue cyan italic")
+from ryan_utils import debug_print
 import imageio.v3 as iio
 from PIL import Image
 

@@ -1,7 +1,5 @@
 import os, torch, json, importlib
-from functools import partial
-import rp
-debug_print = partial(rp.fansi_print, style="blue cyan italic")
+from ryan_utils import debug_print
 from typing import List
 
 from .downloader import download_models, download_customized_models, Preset_model_id, Preset_model_website
