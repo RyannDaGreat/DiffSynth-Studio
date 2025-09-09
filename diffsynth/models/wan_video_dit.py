@@ -1,4 +1,5 @@
 import torch
+from ryan_utils import debug_print
 import torch.nn as nn
 import torch.nn.functional as F
 import math
@@ -418,6 +419,13 @@ class WanModelStateDictConverter:
         pass
 
     def from_diffusers(self, state_dict):
+        debug_print("WanModelStateDictConverter.from_diffusers: start")
+        debug_print(f"WanModelStateDictConverter.from_diffusers: num_keys={len(state_dict)}")
+        try:
+            sample_keys = list(state_dict.keys())[:10]
+            debug_print(f"WanModelStateDictConverter.from_diffusers: sample_keys={sample_keys}")
+        except Exception:
+            pass
         rename_dict = {
             "blocks.0.attn1.norm_k.weight": "blocks.0.self_attn.norm_k.weight",
             "blocks.0.attn1.norm_q.weight": "blocks.0.self_attn.norm_q.weight",
@@ -463,15 +471,28 @@ class WanModelStateDictConverter:
             "proj_out.weight": "head.head.weight",
         }
         state_dict_ = {}
+        direct_matches = 0
+        block_matches = 0
+        unmatched = 0
         for name, param in state_dict.items():
             if name in rename_dict:
                 state_dict_[rename_dict[name]] = param
+                direct_matches += 1
             else:
                 name_ = ".".join(name.split(".")[:1] + ["0"] + name.split(".")[2:])
                 if name_ in rename_dict:
                     name_ = rename_dict[name_]
                     name_ = ".".join(name_.split(".")[:1] + [name.split(".")[1]] + name_.split(".")[2:])
                     state_dict_[name_] = param
+                    block_matches += 1
+                else:
+                    unmatched += 1
+        debug_print(f"WanModelStateDictConverter.from_diffusers: mapped={len(state_dict_)} direct={direct_matches} block={block_matches} unmatched={unmatched}")
+        try:
+            key_hash = hash_state_dict_keys(state_dict)
+            debug_print(f"WanModelStateDictConverter.from_diffusers: hash={key_hash}")
+        except Exception:
+            pass
         if hash_state_dict_keys(state_dict) == "cb104773c6c2cb6df4f9529ad5c60d0b":
             config = {
                 "model_type": "t2v",
@@ -492,10 +513,35 @@ class WanModelStateDictConverter:
             }
         else:
             config = {}
+        debug_print(f"WanModelStateDictConverter.from_diffusers: config_keys={list(config.keys())}")
         return state_dict_, config
     
     def from_civitai(self, state_dict):
+        debug_print("WanModelStateDictConverter.from_civitai: start")
+        total_before = len(state_dict)
         state_dict = {name: param for name, param in state_dict.items() if not name.startswith("vace")}
+        total_after = len(state_dict)
+        debug_print(f"WanModelStateDictConverter.from_civitai: pruned_vace removed={total_before-total_after} keep={total_after}")
+        # Log top key prefixes to see distribution
+        try:
+            from collections import Counter
+            prefixes = [k.split('.')[0] for k in state_dict.keys()]
+            counts = Counter(prefixes)
+            common = counts.most_common(10)
+            debug_print(f"WanModelStateDictConverter.from_civitai: top_prefixes={common}")
+        except Exception:
+            pass
+        try:
+            sample_keys = list(state_dict.keys())[:10]
+            debug_print(f"WanModelStateDictConverter.from_civitai: sample_keys={sample_keys}")
+        except Exception:
+            pass
+        try:
+            key_hash = hash_state_dict_keys(state_dict)
+            debug_print(f"WanModelStateDictConverter.from_civitai: hash={key_hash}")
+        except Exception:
+            key_hash = None
+        debug_print("WanModelStateDictConverter.from_civitai: selecting config via hash")
         if hash_state_dict_keys(state_dict) == "9269f8db9040a9d860eaca435be61814":
             config = {
                 "has_image_input": False,
@@ -752,4 +798,12 @@ class WanModelStateDictConverter:
             }
         else:
             config = {}
+        try:
+            debug_print(f"WanModelStateDictConverter.from_civitai: selected_config_summary={{'dim': {config.get('dim')}, 'num_layers': {config.get('num_layers')}, 'in_dim': {config.get('in_dim')}, 'has_image_input': {config.get('has_image_input')}}}")
+            required = ['dim','num_layers','in_dim','ffn_dim','freq_dim','text_dim','out_dim']
+            missing = [k for k in required if k not in config]
+            debug_print(f"WanModelStateDictConverter.from_civitai: missing_required={missing}")
+        except Exception:
+            pass
+        debug_print("WanModelStateDictConverter.from_civitai: end")
         return state_dict, config
