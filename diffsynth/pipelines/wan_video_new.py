@@ -1,4 +1,7 @@
 import torch, warnings, glob, os, types
+from functools import partial
+import rp
+debug_print = partial(rp.fansi_print, style="blue cyan italic")
 import numpy as np
 from PIL import Image
 from einops import repeat, reduce
@@ -320,6 +323,7 @@ class WanVideoPipeline(BasePipeline):
         redirect_common_files: bool = True,
         use_usp=False,
     ):
+        debug_print("WanVideoPipeline.from_pretrained: start")
         # Redirect model path
         if redirect_common_files:
             redirect_dict = {
@@ -339,8 +343,10 @@ class WanVideoPipeline(BasePipeline):
         if use_usp: pipe.initialize_usp()
         
         # Download and load models
+        debug_print("WanVideoPipeline.from_pretrained: creating ModelManager")
         model_manager = ModelManager()
         for model_config in model_configs:
+            debug_print(f"WanVideoPipeline.from_pretrained: downloading/loading -> model_id={model_config.model_id} path={model_config.path} pattern={model_config.origin_file_pattern}")
             model_config.download_if_necessary(use_usp=use_usp)
             model_manager.load_model(
                 model_config.path,
@@ -349,6 +355,7 @@ class WanVideoPipeline(BasePipeline):
             )
         
         # Load models
+        debug_print("WanVideoPipeline.from_pretrained: fetching submodels from ModelManager")
         pipe.text_encoder = model_manager.fetch_model("wan_video_text_encoder")
         dit = model_manager.fetch_model("wan_video_dit", index=2)
         if isinstance(dit, list):
@@ -367,16 +374,19 @@ class WanVideoPipeline(BasePipeline):
             pipe.width_division_factor = pipe.vae.upsampling_factor * 2
 
         # Initialize tokenizer
+        debug_print("WanVideoPipeline.from_pretrained: downloading/fetching tokenizer")
         tokenizer_config.download_if_necessary(use_usp=use_usp)
         pipe.prompter.fetch_models(pipe.text_encoder)
         pipe.prompter.fetch_tokenizer(tokenizer_config.path)
 
         if audio_processor_config is not None:
+            debug_print("WanVideoPipeline.from_pretrained: downloading audio processor")
             audio_processor_config.download_if_necessary(use_usp=use_usp)
             from transformers import Wav2Vec2Processor
             pipe.audio_processor = Wav2Vec2Processor.from_pretrained(audio_processor_config.path)
         # Unified Sequence Parallel
         if use_usp: pipe.enable_usp()
+        debug_print("WanVideoPipeline.from_pretrained: done")
         return pipe
 
 

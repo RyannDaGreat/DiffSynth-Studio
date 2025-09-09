@@ -1,4 +1,7 @@
 import torch, os, json
+from functools import partial
+import rp
+debug_print = partial(rp.fansi_print, style="blue cyan italic")
 from diffsynth import load_state_dict
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
 from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser
@@ -21,8 +24,12 @@ class WanTrainingModule(DiffusionTrainingModule):
     ):
         super().__init__()
         # Load models
+        debug_print("WanTrainingModule.__init__: begin")
+        debug_print(f"WanTrainingModule.__init__: parse_model_configs(model_paths set={model_paths is not None}, model_id_with_origin_paths set={model_id_with_origin_paths is not None})")
         model_configs = self.parse_model_configs(model_paths, model_id_with_origin_paths, enable_fp8_training=False)
+        debug_print(f"WanTrainingModule.__init__: parsed {len(model_configs)} model_configs")
         self.pipe = WanVideoPipeline.from_pretrained(torch_dtype=torch.bfloat16, device="cpu", model_configs=model_configs)
+        debug_print("WanTrainingModule.__init__: pipeline created")
         
         # Training mode
         self.switch_pipe_to_training_mode(
@@ -30,6 +37,7 @@ class WanTrainingModule(DiffusionTrainingModule):
             lora_base_model, lora_target_modules, lora_rank, lora_checkpoint=lora_checkpoint,
             enable_fp8_training=False,
         )
+        debug_print("WanTrainingModule.__init__: switch_pipe_to_training_mode done")
         
         # Store other configs
         self.use_gradient_checkpointing = use_gradient_checkpointing
@@ -37,9 +45,11 @@ class WanTrainingModule(DiffusionTrainingModule):
         self.extra_inputs = extra_inputs.split(",") if extra_inputs is not None else []
         self.max_timestep_boundary = max_timestep_boundary
         self.min_timestep_boundary = min_timestep_boundary
+        debug_print(f"WanTrainingModule.__init__: extra_inputs={self.extra_inputs}, timestep_boundary=({self.min_timestep_boundary}, {self.max_timestep_boundary})")
         
         
     def forward_preprocess(self, data):
+        debug_print("WanTrainingModule.forward_preprocess: start")
         # CFG-sensitive parameters
         inputs_posi = {"prompt": data["prompt"]}
         inputs_nega = {}
@@ -78,20 +88,28 @@ class WanTrainingModule(DiffusionTrainingModule):
         
         # Pipeline units will automatically process the input parameters.
         for unit in self.pipe.units:
+            debug_print(f"WanTrainingModule.forward_preprocess: running unit {unit.__class__.__name__}")
             inputs_shared, inputs_posi, inputs_nega = self.pipe.unit_runner(unit, self.pipe, inputs_shared, inputs_posi, inputs_nega)
+        debug_print("WanTrainingModule.forward_preprocess: done")
         return {**inputs_shared, **inputs_posi}
     
     
     def forward(self, data, inputs=None):
-        if inputs is None: inputs = self.forward_preprocess(data)
+        if inputs is None:
+            debug_print("WanTrainingModule.forward: preprocessing inputs")
+            inputs = self.forward_preprocess(data)
         models = {name: getattr(self.pipe, name) for name in self.pipe.in_iteration_models}
+        debug_print("WanTrainingModule.forward: computing training_loss")
         loss = self.pipe.training_loss(**models, **inputs)
+        debug_print(f"WanTrainingModule.forward: loss computed -> {float(loss.detach().cpu()):.6f}")
         return loss
 
 
 if __name__ == "__main__":
+    debug_print("train.py main: building parser")
     parser = wan_parser()
     args = parser.parse_args()
+    debug_print(f"train.py main: args parsed; dataset_base_path={args.dataset_base_path}, metadata={args.dataset_metadata_path}")
     dataset = UnifiedDataset(
         base_path=args.dataset_base_path,
         metadata_path=args.dataset_metadata_path,
@@ -109,6 +127,7 @@ if __name__ == "__main__":
             time_division_remainder=1,
         ),
     )
+    debug_print(f"train.py main: dataset built; len={len(dataset)} load_from_cache={dataset.load_from_cache}")
     model = WanTrainingModule(
         model_paths=args.model_paths,
         model_id_with_origin_paths=args.model_id_with_origin_paths,
@@ -122,8 +141,11 @@ if __name__ == "__main__":
         max_timestep_boundary=args.max_timestep_boundary,
         min_timestep_boundary=args.min_timestep_boundary,
     )
+    debug_print("train.py main: model created")
     model_logger = ModelLogger(
         args.output_path,
         remove_prefix_in_ckpt=args.remove_prefix_in_ckpt
     )
+    debug_print(f"train.py main: launching training -> output_path={args.output_path}")
     launch_training_task(dataset, model, model_logger, args=args)
+    debug_print("train.py main: training finished")

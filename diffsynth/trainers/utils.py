@@ -1,4 +1,7 @@
 import imageio, os, torch, warnings, torchvision, argparse, json
+from functools import partial
+import rp
+debug_print = partial(rp.fansi_print, style="blue cyan italic")
 from ..utils import ModelConfig
 from ..models.utils import load_state_dict
 from peft import LoraConfig, inject_adapter_in_model
@@ -429,14 +432,20 @@ class DiffusionTrainingModule(torch.nn.Module):
     
     
     def parse_model_configs(self, model_paths, model_id_with_origin_paths, enable_fp8_training=False):
+        debug_print("parse_model_configs: start")
         offload_dtype = torch.float8_e4m3fn if enable_fp8_training else None
         model_configs = []
         if model_paths is not None:
+            debug_print("parse_model_configs: parsing --model_paths JSON")
             model_paths = json.loads(model_paths)
+            debug_print(f"parse_model_configs: got {len(model_paths)} entries")
             model_configs += [ModelConfig(path=path, offload_dtype=offload_dtype) for path in model_paths]
         if model_id_with_origin_paths is not None:
+            debug_print("parse_model_configs: parsing --model_id_with_origin_paths")
             model_id_with_origin_paths = model_id_with_origin_paths.split(",")
+            debug_print(f"parse_model_configs: got {len(model_id_with_origin_paths)} entries")
             model_configs += [ModelConfig(model_id=i.split(":")[0], origin_file_pattern=i.split(":")[1], offload_dtype=offload_dtype) for i in model_id_with_origin_paths]
+        debug_print(f"parse_model_configs: returning {len(model_configs)} configs")
         return model_configs
     
     
@@ -538,6 +547,7 @@ def launch_training_task(
         gradient_accumulation_steps = args.gradient_accumulation_steps
         find_unused_parameters = args.find_unused_parameters
     
+    debug_print("launch_training_task: building optimizer/scheduler/dataloader")
     optimizer = torch.optim.AdamW(model.trainable_modules(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer)
     dataloader = torch.utils.data.DataLoader(dataset, shuffle=True, collate_fn=lambda x: x[0], num_workers=num_workers)
@@ -545,16 +555,21 @@ def launch_training_task(
         gradient_accumulation_steps=gradient_accumulation_steps,
         kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=find_unused_parameters)],
     )
+    debug_print("launch_training_task: preparing accelerator")
     model, optimizer, dataloader, scheduler = accelerator.prepare(model, optimizer, dataloader, scheduler)
     
+    debug_print("launch_training_task: starting training loop")
     for epoch_id in range(num_epochs):
+        debug_print(f"launch_training_task: epoch {epoch_id} start")
         for data in tqdm(dataloader):
             with accelerator.accumulate(model):
                 optimizer.zero_grad()
+                debug_print("launch_training_task: got a batch")
                 if dataset.load_from_cache:
                     loss = model({}, inputs=data)
                 else:
                     loss = model(data)
+                debug_print(f"launch_training_task: loss={float(loss.detach().cpu()):.6f}")
                 accelerator.backward(loss)
                 optimizer.step()
                 model_logger.on_step_end(accelerator, model, save_steps)

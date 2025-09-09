@@ -1,4 +1,7 @@
 import torch, torchvision, imageio, os, json, pandas
+from functools import partial
+import rp
+debug_print = partial(rp.fansi_print, style="blue cyan italic")
 import imageio.v3 as iio
 from PIL import Image
 
@@ -64,6 +67,7 @@ class LoadImage(DataProcessingOperator):
         self.convert_RGB = convert_RGB
     
     def __call__(self, data: str):
+        debug_print(f"LoadImage: opening {data}")
         image = Image.open(data)
         if self.convert_RGB: image = image.convert("RGB")
         return image
@@ -103,7 +107,9 @@ class ImageCropAndResize(DataProcessingOperator):
     
     
     def __call__(self, data: Image.Image):
+        debug_print(f"ImageCropAndResize: before {data.size}")
         image = self.crop_and_resize(data, *self.get_height_width(data))
+        debug_print(f"ImageCropAndResize: after {image.size}")
         return image
 
 
@@ -131,8 +137,10 @@ class LoadVideo(DataProcessingOperator):
         return num_frames
         
     def __call__(self, data: str):
+        debug_print(f"LoadVideo: opening {data}")
         reader = imageio.get_reader(data)
         num_frames = self.get_num_frames(reader)
+        debug_print(f"LoadVideo: will read {num_frames} frames from {data}")
         frames = []
         for frame_id in range(num_frames):
             frame = reader.get_data(frame_id)
@@ -140,6 +148,7 @@ class LoadVideo(DataProcessingOperator):
             frame = self.frame_processor(frame)
             frames.append(frame)
         reader.close()
+        debug_print(f"LoadVideo: finished {data}")
         return frames
 
 
@@ -171,6 +180,7 @@ class LoadGIF(DataProcessingOperator):
         return num_frames
         
     def __call__(self, data: str):
+        debug_print(f"LoadGIF: opening {data}")
         num_frames = self.get_num_frames(data)
         frames = []
         images = iio.imread(data, mode="RGB")
@@ -180,6 +190,7 @@ class LoadGIF(DataProcessingOperator):
             frames.append(frame)
             if len(frames) >= num_frames:
                 break
+        debug_print(f"LoadGIF: finished {data}, kept {len(frames)} frames")
         return frames
     
 
@@ -192,6 +203,7 @@ class RouteByExtensionName(DataProcessingOperator):
         file_ext_name = data.split(".")[-1].lower()
         for ext_names, operator in self.operator_map:
             if ext_names is None or file_ext_name in ext_names:
+                debug_print(f"RouteByExtensionName: {data} matched {ext_names}")
                 return operator(data)
         raise ValueError(f"Unsupported file: {data}")
 
@@ -223,7 +235,9 @@ class ToAbsolutePath(DataProcessingOperator):
         self.base_path = base_path
         
     def __call__(self, data):
-        return os.path.join(self.base_path, data)
+        path = os.path.join(self.base_path, data)
+        debug_print(f"ToAbsolutePath: {data} -> {path}")
+        return path
 
 
 
@@ -246,7 +260,9 @@ class UnifiedDataset(torch.utils.data.Dataset):
         self.data = []
         self.cached_data = []
         self.load_from_cache = metadata_path is None
+        debug_print("UnifiedDataset.__init__: loading metadata")
         self.load_metadata(metadata_path)
+        debug_print(f"UnifiedDataset.__init__: metadata loaded; load_from_cache={self.load_from_cache} data_len={len(self.data)} cached_len={len(self.cached_data)}")
     
     @staticmethod
     def default_image_operator(
@@ -303,8 +319,10 @@ class UnifiedDataset(torch.utils.data.Dataset):
         else:
             metadata = pandas.read_csv(metadata_path)
             self.data = [metadata.iloc[i].to_dict() for i in range(len(metadata))]
+        debug_print(f"UnifiedDataset.load_metadata: done; entries={(len(self.data) if metadata_path else len(self.cached_data))} from {metadata_path}")
 
     def __getitem__(self, data_id):
+        debug_print(f"UnifiedDataset.__getitem__: id={data_id}")
         if self.load_from_cache:
             data = self.cached_data[data_id % len(self.cached_data)]
             data = self.cached_data_operator(data)
@@ -316,6 +334,7 @@ class UnifiedDataset(torch.utils.data.Dataset):
                         data[key] = self.special_operator_map[key]
                     elif key in self.data_file_keys:
                         data[key] = self.main_data_operator(data[key])
+        debug_print("UnifiedDataset.__getitem__: done")
         return data
 
     def __len__(self):
