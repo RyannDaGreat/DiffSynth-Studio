@@ -1,0 +1,21 @@
+
+#<RP Default Gitignore Start>
+*.pyc
+*.bak
+*.swh
+*.swi
+*.swj
+*.swk
+*.swl
+*.swm
+*.swn
+*.swo
+*.swp
+*.un~
+*.gstmp
+*.ipynb_checkpoints
+*.DS_Store
+#<RP Default Gitignore End>
+
+diffsynth.egg-info
+wan_gwtf_test__deg=1__steps=20__T=49.mp4
