@@ -105,9 +105,9 @@ class ImageCropAndResize(DataProcessingOperator):
     
     
     def __call__(self, data: Image.Image):
-        debug_print(f"ImageCropAndResize: before {data.size}")
+        # debug_print(f"ImageCropAndResize: before {data.size}")
         image = self.crop_and_resize(data, *self.get_height_width(data))
-        debug_print(f"ImageCropAndResize: after {image.size}")
+        # debug_print(f"ImageCropAndResize: after {image.size}")
         return image
 
 
