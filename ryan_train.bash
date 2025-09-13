@@ -1,0 +1,168 @@
+!
+
+
+#Copy To This Machine (Super Fast the Second Time)
+HUG_DIR=/huggingface_models
+mkdir $HUG_DIR
+rclone copy --progress --transfers 128  /root/CleanCode/Github/DiffSynth-Studio/huggingface_models $HUG_DIR
+
+#Icecream equivalent for bash
+# ic() { for v in "$@"; do echo "[ic] $v=${!v}"; done; }
+ic(){ for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
+
+
+#Custom model path locations
+MODEL_PATHS_JSON='[
+  [
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors"
+  ],
+  "'"$HUG_DIR"'/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth",
+  "'"$HUG_DIR"'/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
+]'
+
+
+export PYTHONUNBUFFERED=1
+
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+#export CUDA_VISIBLE_DEVICES=0
+
+#Print things out
+ic HUG_DIR
+ic MODEL_PATHS_JSON
+ic CUDA_VISIBLE_DEVICES
+
+
+# PYTHONUNBUFFERED=1 CUDA_VISIBLE_DEVICES=0 accelerate launch --num_processes=1 examples/wanvideo/model_training/train.py \
+#   --dataset_base_path data/example_video_dataset \
+#   --dataset_metadata_path data/example_video_dataset/metadata.csv \
+#   --height 480 --width 832 --num_frames 49 \
+#   --dataset_repeat 100 \
+#   --model_paths '[
+#     [
+#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors"
+#     ],
+#     "huggingface_models/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth",
+#     "huggingface_models/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
+#   ]' \
+#   --learning_rate 1e-4 --num_epochs 5 \
+#   --remove_prefix_in_ckpt "pipe.dit." \
+#   --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora" \
+#   --lora_base_model "dit" \
+#   --lora_target_modules "q,k,v,o,ffn.0,ffn.2" \
+#   --lora_rank 32 \
+#   --extra_inputs "input_image" \
+#   --max_timestep_boundary 0.358 \
+#   --min_timestep_boundary 0
+
+accelerate launch examples/wanvideo/model_training/train.py \
+  --dataset_base_path data/WEB360_Video_Dataset/WEB360/videos_480x832x49 \
+  --dataset_metadata_path data/WEB360_Video_Dataset/metadata.csv \
+  --height 480 --width 832 --num_frames 49 \
+  --dataset_repeat 100 \
+  --model_paths "$MODEL_PATHS_JSON" \
+  --learning_rate 1e-4 --num_epochs 100 \
+  --remove_prefix_in_ckpt "pipe.dit." \
+  --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora" \
+  --lora_base_model "dit" \
+  --lora_target_modules "q,k,v,o,ffn.0,ffn.2" \
+  --lora_rank 512 \
+  --extra_inputs "input_image" \
+  --max_timestep_boundary 0.358 \
+  --min_timestep_boundary 0
+
+# accelerate launch examples/wanvideo/model_training/train.py \
+#   --dataset_base_path data/example_video_dataset \
+#   --dataset_metadata_path data/example_video_dataset/metadata.csv \
+#   --height 480 --width 832 --num_frames 49 \
+#   --dataset_repeat 100 \
+#   --model_paths '[
+#     [
+#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors",
+#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors"
+#     ],
+#     "huggingface_models/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth",
+#     "huggingface_models/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
+#   ]' \
+#   --learning_rate 1e-4 --num_epochs 5 \
+#   --remove_prefix_in_ckpt "pipe.dit." \
+#   --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora" \
+#   --lora_base_model "dit" \
+#   --lora_target_modules "q,k,v,o,ffn.0,ffn.2" \
+#   --lora_rank 32 \
+#   --extra_inputs "input_image" \
+#   --max_timestep_boundary 1 \
+#   --min_timestep_boundary 0.
+
+#DOCUMENTATION:
+#    options:
+#      -h, --help            show this help message and exit
+#      --dataset_base_path DATASET_BASE_PATH
+#                            Base path of the dataset.
+#      --dataset_metadata_path DATASET_METADATA_PATH
+#                            Path to the metadata file of the dataset.
+#      --max_pixels MAX_PIXELS
+#                            Maximum number of pixels per frame, used for dynamic resolution..
+#      --height HEIGHT       Height of images or videos. Leave `height` and `width` empty to enable dynamic resolution.
+#      --width WIDTH         Width of images or videos. Leave `height` and `width` empty to enable dynamic resolution.
+#      --num_frames NUM_FRAMES
+#                            Number of frames per video. Frames are sampled from the video prefix.
+#      --data_file_keys DATA_FILE_KEYS
+#                            Data file keys in the metadata. Comma-separated.
+#      --dataset_repeat DATASET_REPEAT
+#                            Number of times to repeat the dataset per epoch.
+#      --model_paths MODEL_PATHS
+#                            Paths to load models. In JSON format.
+#      --model_id_with_origin_paths MODEL_ID_WITH_ORIGIN_PATHS
+#                            Model ID with origin paths, e.g., Wan-AI/Wan2.1-T2V-1.3B:diffusion_pytorch_model*.safetensors. Comma-separated.
+#      --learning_rate LEARNING_RATE
+#                            Learning rate.
+#      --num_epochs NUM_EPOCHS
+#                            Number of epochs.
+#      --output_path OUTPUT_PATH
+#                            Output save path.
+#      --remove_prefix_in_ckpt REMOVE_PREFIX_IN_CKPT
+#                            Remove prefix in ckpt.
+#      --trainable_models TRAINABLE_MODELS
+#                            Models to train, e.g., dit, vae, text_encoder.
+#      --lora_base_model LORA_BASE_MODEL
+#                            Which model LoRA is added to.
+#      --lora_target_modules LORA_TARGET_MODULES
+#                            Which layers LoRA is added to.
+#      --lora_rank LORA_RANK
+#                            Rank of LoRA.
+#      --lora_checkpoint LORA_CHECKPOINT
+#                            Path to the LoRA checkpoint. If provided, LoRA will be loaded from this checkpoint.
+#      --extra_inputs EXTRA_INPUTS
+#                            Additional model inputs, comma-separated.
+#      --use_gradient_checkpointing_offload
+#                            Whether to offload gradient checkpointing to CPU memory.
+#      --gradient_accumulation_steps GRADIENT_ACCUMULATION_STEPS
+#                            Gradient accumulation steps.
+#      --max_timestep_boundary MAX_TIMESTEP_BOUNDARY
+#                            Max timestep boundary (for mixed models, e.g., Wan-AI/Wan2.2-I2V-A14B).
+#      --min_timestep_boundary MIN_TIMESTEP_BOUNDARY
+#                            Min timestep boundary (for mixed models, e.g., Wan-AI/Wan2.2-I2V-A14B).
+#      --find_unused_parameters
+#                            Whether to find unused parameters in DDP.
+#      --save_steps SAVE_STEPS
+#                            Number of checkpoint saving invervals. If None, checkpoints will be saved every epoch.
+#      --dataset_num_workers DATASET_NUM_WORKERS
+#                            Number of workers for data loading.
+#      --weight_decay WEIGHT_DECAY
+#                            Weight decay.
+#      --debug_print_mode {off,lines}
+#                            Enable ultra-verbose line tracing (off|lines).
