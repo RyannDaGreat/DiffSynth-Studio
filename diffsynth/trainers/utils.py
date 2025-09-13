@@ -632,6 +632,8 @@ def wan_parser():
     parser.add_argument("--save_steps", type=int, default=None, help="Number of checkpoint saving invervals. If None, checkpoints will be saved every epoch.")
     parser.add_argument("--dataset_num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay.")
+    # Debug/logging
+    parser.add_argument("--debug_print_mode", type=str, default="off", choices=["off", "lines"], help="Enable ultra-verbose line tracing (off|lines).")
     return parser
 
 

@@ -106,11 +106,13 @@ class WanTrainingModule(DiffusionTrainingModule):
 
 
 if __name__ == "__main__":
-    # WARNING: extremely noisy. Set include_libs=False to limit to repo files only.
-    # enable_line_tracing(include_libs=True)
     debug_print("train.py main: building parser")
     parser = wan_parser()
     args = parser.parse_args()
+    if getattr(args, "debug_print_mode", "off") == "lines":
+        # WARNING: extremely noisy. Set include_libs=False to limit to repo files only.
+        enable_line_tracing(include_libs=True)
+        debug_print("train.py main: line tracing enabled via --debug_print_mode=lines")
     debug_print(f"train.py main: args parsed; dataset_base_path={args.dataset_base_path}, metadata={args.dataset_metadata_path}")
     dataset = UnifiedDataset(
         base_path=args.dataset_base_path,
