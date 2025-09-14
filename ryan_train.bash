@@ -31,10 +31,13 @@ export PYTHONUNBUFFERED=1
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export CUDA_VISIBLE_DEVICES=0
 
+SAVE_STEPS=250
+
 #Print things out
 ic HUG_DIR
 ic MODEL_PATHS_JSON
 ic CUDA_VISIBLE_DEVICES
+ic SAVE_STEPS
 
 
 # PYTHONUNBUFFERED=1 CUDA_VISIBLE_DEVICES=0 accelerate launch --num_processes=1 examples/wanvideo/model_training/train.py \
@@ -78,7 +81,9 @@ accelerate launch examples/wanvideo/model_training/train.py \
   --lora_rank 512 \
   --extra_inputs "input_image" \
   --max_timestep_boundary 0.358 \
+  --save_steps $SAVE_STEPS \
   --min_timestep_boundary 0
+
 
 # accelerate launch examples/wanvideo/model_training/train.py \
 #   --dataset_base_path data/example_video_dataset \
