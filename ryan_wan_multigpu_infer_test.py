@@ -1,6 +1,7 @@
 #TO RUN: ! CUDA_VISIBLE_DEVICES=4,5,6,7 torchrun --standalone --nproc_per_node=4 ryan_wan_multigpu_infer_test.py
 
 import torch
+import argparse
 from PIL import Image
 from diffsynth import save_video
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
@@ -8,6 +9,14 @@ import torch.distributed as dist
 import glob, os
 
 ROOT = "/Wan2.2-I2V-A14B"
+
+# Optional CLI to load LoRA(s)
+parser = argparse.ArgumentParser()
+parser.add_argument("--lora_dit", type=str, default=None, help="Path(s) to LoRA for dit (comma-separated).")
+parser.add_argument("--lora_dit_alpha", type=float, default=1.0, help="Alpha for dit LoRA.")
+parser.add_argument("--lora_dit2", type=str, default=None, help="Path(s) to LoRA for dit2 (comma-separated).")
+parser.add_argument("--lora_dit2_alpha", type=float, default=1.0, help="Alpha for dit2 LoRA.")
+args, _ = parser.parse_known_args()
 
 high_noise_files = sorted(glob.glob(f"{ROOT}/high_noise_model/diffusion_pytorch_model-*.safetensors"))
 low_noise_files  = sorted(glob.glob(f"{ROOT}/low_noise_model/diffusion_pytorch_model-*.safetensors"))
@@ -23,6 +32,19 @@ pipe = WanVideoPipeline.from_pretrained(
         ModelConfig(path=f"{ROOT}/Wan2.1_VAE.pth", offload_device="cpu", skip_download=True),
     ],
 )
+
+# Load optional LoRAs with existence checks (before VRAM mgmt so adapters get wrapped)
+def _load_optional_loras(module, comma_paths, alpha):
+    if comma_paths is None:
+        return
+    for p in [i.strip() for i in comma_paths.split(",") if i.strip()]:
+        if not os.path.isfile(p):
+            raise FileNotFoundError(f"LoRA file not found: {p}")
+        pipe.load_lora(module, p, alpha=alpha)
+
+_load_optional_loras(pipe.dit, args.lora_dit, args.lora_dit_alpha)
+if getattr(pipe, "dit2", None) is not None:
+    _load_optional_loras(pipe.dit2, args.lora_dit2, args.lora_dit2_alpha)
 
 pipe.enable_vram_management()
 
