@@ -1,8 +1,24 @@
-from functools import partial
 import rp
 import sys, threading, linecache, os
 
-debug_print = partial(rp.fansi_print, style="blue cyan italic")
+# Global toggle for debug_print behavior
+_DEBUG_PRINT_ENABLED = True
+
+def set_debug_print_enabled(enabled: bool) -> None:
+    """Enable or disable debug_print globally at runtime.
+
+    When disabled, all calls to debug_print become no-ops.
+    """
+    global _DEBUG_PRINT_ENABLED
+    _DEBUG_PRINT_ENABLED = bool(enabled)
+
+def debug_print(*args, **kwargs):
+    """Styled debug print that can be disabled via set_debug_print_enabled."""
+    if not _DEBUG_PRINT_ENABLED:
+        return
+    # Ensure our style is applied while respecting caller kwargs
+    kwargs.setdefault("style", "blue cyan italic")
+    return rp.fansi_print(*args, **kwargs)
 
 def enable_line_tracing(include_libs=True):
     """Enable super-verbose line-level tracing. Prints every executed line.

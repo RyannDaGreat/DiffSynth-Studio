@@ -1,4 +1,5 @@
 import torch, os, json
+from ryan_utils import set_debug_print_enabled
 from diffsynth import load_state_dict
 from diffsynth.pipelines.flux_image_new import FluxImagePipeline, ModelConfig, ControlNetInput
 from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, flux_parser
@@ -86,6 +87,8 @@ class FluxTrainingModule(DiffusionTrainingModule):
 if __name__ == "__main__":
     parser = flux_parser()
     args = parser.parse_args()
+    if getattr(args, "no_debug_print", False):
+        set_debug_print_enabled(False)
     dataset = UnifiedDataset(
         base_path=args.dataset_base_path,
         metadata_path=args.dataset_metadata_path,

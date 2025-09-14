@@ -1,4 +1,5 @@
 import torch, os, json
+from ryan_utils import set_debug_print_enabled
 from diffsynth import load_state_dict
 from diffsynth.pipelines.qwen_image import QwenImagePipeline, ModelConfig
 from diffsynth.pipelines.flux_image_new import ControlNetInput
@@ -94,6 +95,8 @@ class QwenImageTrainingModule(DiffusionTrainingModule):
 if __name__ == "__main__":
     parser = qwen_image_parser()
     args = parser.parse_args()
+    if getattr(args, "no_debug_print", False):
+        set_debug_print_enabled(False)
     dataset = UnifiedDataset(
         base_path=args.dataset_base_path,
         metadata_path=args.dataset_metadata_path,

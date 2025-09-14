@@ -1,7 +1,7 @@
 import torch, os, json
 import sys
 sys.path.append("/root/CleanCode/Github/DiffSynth-Studio")
-from ryan_utils import debug_print, enable_line_tracing
+from ryan_utils import debug_print, enable_line_tracing, set_debug_print_enabled
 from diffsynth import load_state_dict
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
 from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser
@@ -109,6 +109,8 @@ if __name__ == "__main__":
     debug_print("train.py main: building parser")
     parser = wan_parser()
     args = parser.parse_args()
+    if getattr(args, "no_debug_print", False):
+        set_debug_print_enabled(False)
     if getattr(args, "debug_print_mode", "off") == "lines":
         # WARNING: extremely noisy. Set include_libs=False to limit to repo files only.
         enable_line_tracing(include_libs=True)
