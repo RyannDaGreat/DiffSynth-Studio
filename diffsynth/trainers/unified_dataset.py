@@ -326,12 +326,16 @@ class UnifiedDataset(torch.utils.data.Dataset):
             data = self.cached_data_operator(data)
         else:
             data = self.data[data_id % len(self.data)].copy()
-            for key in self.data_file_keys:
-                if key in data:
-                    if key in self.special_operator_map:
-                        data[key] = self.special_operator_map[key]
-                    elif key in self.data_file_keys:
-                        data[key] = self.main_data_operator(data[key])
+            try:
+                for key in self.data_file_keys:
+                    if key in data:
+                        if key in self.special_operator_map:
+                            data[key] = self.special_operator_map[key]
+                        elif key in self.data_file_keys:
+                            data[key] = self.main_data_operator(data[key])
+            except Exception as e:
+                print(f"Bad sample at idx {data_id}: {e}")
+                return self.__getitem__(int(torch.randint(0, len(self.data), (1,)).item()))
         debug_print("UnifiedDataset.__getitem__: done")
         return data
 
