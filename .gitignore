@@ -26,3 +26,4 @@ models/Wan-AI
 video1.mp4
 models/train/old
 models/train/Wan2.2-I2V-A14B_high_noise_lora
+models/train/Wan2.2-I2V-A14B_low_noise_lora
