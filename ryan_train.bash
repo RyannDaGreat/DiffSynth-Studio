@@ -1,7 +1,8 @@
 !
 
+set -x # Print bash script out as it executes
 
-#Copy To This Machine (Super Fast the Second Time)
+#Copy Model To This Machine (Super Fast the Second Time)
 HUG_DIR=/huggingface_models
 mkdir $HUG_DIR
 rclone copy --progress --transfers 128  /root/CleanCode/Github/DiffSynth-Studio/huggingface_models $HUG_DIR
@@ -12,7 +13,7 @@ ic(){ for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
 
 
 #Custom model path locations
-MODEL_PATHS_JSON='[
+HIGH_NOISE_MODEL_PATHS='[
   [
     "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
     "'"$HUG_DIR"'/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
@@ -25,92 +26,63 @@ MODEL_PATHS_JSON='[
   "'"$HUG_DIR"'/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
 ]'
 
+LOW_NOISE_MODEL_PATHS='[
+  [
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors",
+    "'"$HUG_DIR"'/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors"
+  ],
+  "'"$HUG_DIR"'/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth",
+  "'"$HUG_DIR"'/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
+]'
 
-export PYTHONUNBUFFERED=1
+
+export PYTHONUNBUFFERED=1 #Print Immediately
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export CUDA_VISIBLE_DEVICES=0
 
-SAVE_STEPS=250
+COMMON_ARGS=(
+  --dataset_base_path data/WEB360_Video_Dataset/WEB360/videos_480x832x49
+  --dataset_metadata_path data/WEB360_Video_Dataset/metadata.csv
+  --height 480
+  --width 832
+  --num_frames 49
+  --save_steps 250
+  --lora_rank 512
+  --dataset_repeat 100
+  --learning_rate 1e-4
+  --num_epochs 100
+  --remove_prefix_in_ckpt pipe.dit.
+  --lora_base_model dit
+  --extra_inputs input_image
+  --lora_target_modules q,k,v,o,ffn.0,ffn.2
+)
 
 #Print things out
 ic HUG_DIR
-ic MODEL_PATHS_JSON
+ic HIGH_NOISE_MODEL_PATHS
 ic CUDA_VISIBLE_DEVICES
-ic SAVE_STEPS
+ic "${COMMON_ARGS[@]}"
 
-
-# PYTHONUNBUFFERED=1 CUDA_VISIBLE_DEVICES=0 accelerate launch --num_processes=1 examples/wanvideo/model_training/train.py \
-#   --dataset_base_path data/example_video_dataset \
-#   --dataset_metadata_path data/example_video_dataset/metadata.csv \
-#   --height 480 --width 832 --num_frames 49 \
-#   --dataset_repeat 100 \
-#   --model_paths '[
-#     [
-#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors"
-#     ],
-#     "huggingface_models/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth",
-#     "huggingface_models/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
-#   ]' \
-#   --learning_rate 1e-4 --num_epochs 5 \
-#   --remove_prefix_in_ckpt "pipe.dit." \
+# # High-noise LoRA
+# accelerate launch examples/wanvideo/model_training/train.py \
+#   "${COMMON_ARGS[@]}" \
 #   --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora" \
-#   --lora_base_model "dit" \
-#   --lora_target_modules "q,k,v,o,ffn.0,ffn.2" \
-#   --lora_rank 32 \
-#   --extra_inputs "input_image" \
+#   --model_paths "${HIGH_NOISE_MODEL_PATHS}" \
 #   --max_timestep_boundary 0.358 \
 #   --min_timestep_boundary 0
 
+# Low-noise LoRA
 accelerate launch examples/wanvideo/model_training/train.py \
-  --dataset_base_path data/WEB360_Video_Dataset/WEB360/videos_480x832x49 \
-  --dataset_metadata_path data/WEB360_Video_Dataset/metadata.csv \
-  --height 480 --width 832 --num_frames 49 \
-  --dataset_repeat 100 \
-  --model_paths "$MODEL_PATHS_JSON" \
-  --learning_rate 1e-4 --num_epochs 100 \
-  --remove_prefix_in_ckpt "pipe.dit." \
-  --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora" \
-  --lora_base_model "dit" \
-  --lora_target_modules "q,k,v,o,ffn.0,ffn.2" \
-  --lora_rank 512 \
-  --extra_inputs "input_image" \
-  --max_timestep_boundary 0.358 \
-  --save_steps $SAVE_STEPS \
+  "${COMMON_ARGS[@]}" \
+  --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora" \
+  --model_paths "${LOW_NOISE_MODEL_PATHS}" \
+  --max_timestep_boundary 1 \
   --min_timestep_boundary 0
-
-
-# accelerate launch examples/wanvideo/model_training/train.py \
-#   --dataset_base_path data/example_video_dataset \
-#   --dataset_metadata_path data/example_video_dataset/metadata.csv \
-#   --height 480 --width 832 --num_frames 49 \
-#   --dataset_repeat 100 \
-#   --model_paths '[
-#     [
-#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors",
-#       "huggingface_models/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors"
-#     ],
-#     "huggingface_models/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth",
-#     "huggingface_models/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
-#   ]' \
-#   --learning_rate 1e-4 --num_epochs 5 \
-#   --remove_prefix_in_ckpt "pipe.dit." \
-#   --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora" \
-#   --lora_base_model "dit" \
-#   --lora_target_modules "q,k,v,o,ffn.0,ffn.2" \
-#   --lora_rank 32 \
-#   --extra_inputs "input_image" \
-#   --max_timestep_boundary 1 \
-#   --min_timestep_boundary 0.
 
 #DOCUMENTATION:
 #    options:
