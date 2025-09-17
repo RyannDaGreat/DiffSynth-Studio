@@ -10,6 +10,7 @@ from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
 import torch.distributed as dist
 import glob, os
 
+import rp
 
 def main(
     root: str = "/Wan2.2-I2V-A14B",
@@ -69,17 +70,25 @@ def main(
         if not os.path.isfile(lora_path):
             raise FileNotFoundError(f"LoRA file not found: {lora_path}")
         pipe.load_lora(pipe.dit, lora_path, alpha=1.0)
+        rp.fansi_print(f'RANK {dist.get_rank()}: Loaded pipe.dit LoRA {lora_path}','green')
     if lora_dit2 and getattr(pipe, "dit2", None) is not None:
         lora2_path = lora_dit2.strip()
         if not os.path.isfile(lora2_path):
             raise FileNotFoundError(f"LoRA file not found: {lora2_path}")
         pipe.load_lora(pipe.dit2, lora2_path, alpha=1.0)
+        rp.fansi_print(f'RANK {dist.get_rank()}: Loaded pipe.dit2 LoRA {lora_path}','green')
 
     pipe.enable_vram_management()
 
     if input_image_path is None:
         input_image_path = f"{root}/examples/i2v_input.JPG"
-    input_image = Image.open(input_image_path).resize((832, 480))
+    # input_image = Image.open(input_image_path).resize((832, 480))
+    input_image = rp.load_image(input_image_path)
+    input_image = rp.cv_resize_image(input_image,(480,832))
+    input_image = rp.as_byte_image(input_image)
+    input_image = rp.as_rgb_image(input_image)
+    input_image = rp.as_pil_image(input_image)
+
 
     video = pipe(
         prompt=prompt,
