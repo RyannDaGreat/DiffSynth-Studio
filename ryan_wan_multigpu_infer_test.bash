@@ -1,3 +1,4 @@
+!
 # Copy Model To This Machine (Super Fast the Second Time)
 HUG_DIR=/huggingface_models
 mkdir -p $HUG_DIR
@@ -7,8 +8,8 @@ rclone copy --progress --transfers 128 /root/CleanCode/Github/DiffSynth-Studio/h
 ic() { for v in "$@"; do echo "[ic] $v=${!v}"; done; }
 
 # Define LoRA checkpoints from rp call download_to_cache
-LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_lora/step-8700.safetensors" --show_progress True)
-LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora/step-4000.safetensors"  --show_progress True)
+LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_lora_WEB360/step-8700.safetensors" --show_progress True)
+LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora_WEB360/step-4000.safetensors"  --show_progress True)
 
 # Choose the content
 PROMPT="An ultra-detailed 360 equirectangular panorama inside an aquarium with many colorful fish swimming, crystal-clear water, reflections and caustics, immersive viewpoint, cinematic lighting"
