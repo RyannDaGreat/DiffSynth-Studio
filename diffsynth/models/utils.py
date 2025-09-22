@@ -81,10 +81,9 @@ def load_state_dict_from_safetensors(file_path, torch_dtype=None, device="cpu", 
         metadata = rp.load_safetensors(file_path, device=device, include_tensors=False, include_shapes=True, include_dtypes=True)
         state_dict = {}
         for k, info in rp.eta(metadata.items(), f'Random weights loading'):
-            # Create random tensor with same shape/dtype
-            state_dict[k] = torch.randn(info.shape, dtype=info.dtype, device=device)
-            if torch_dtype is not None:
-                state_dict[k] = state_dict[k].to(torch_dtype)
+            # Create empty tensor directly on target device/dtype (fastest)
+            target_dtype = torch_dtype if torch_dtype is not None else info.dtype
+            state_dict[k] = torch.empty(info.shape, dtype=target_dtype, device=device)
     else:
         # Original loading with actual tensor data
         state_dict = {}
