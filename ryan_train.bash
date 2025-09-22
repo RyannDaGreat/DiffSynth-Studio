@@ -76,13 +76,17 @@ ic "${COMMON_ARGS[@]}"
 #   --max_timestep_boundary 0.358 \
 #   --min_timestep_boundary 0
 
+# Set to 1 to use random weights for fast dataloader debugging
+SKIP_MODEL_LOADING=0
+
 # Low-noise LoRA
 accelerate launch examples/wanvideo/model_training/train.py \
   "${COMMON_ARGS[@]}" \
   --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora" \
   --model_paths "${LOW_NOISE_MODEL_PATHS}" \
   --max_timestep_boundary 1 \
-  --min_timestep_boundary 0
+  --min_timestep_boundary 0 \
+  ${SKIP_MODEL_LOADING:+--skip_model_loading}
 
 #DOCUMENTATION:
 #    options:

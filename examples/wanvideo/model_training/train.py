@@ -30,7 +30,7 @@ class WanTrainingModule(DiffusionTrainingModule):
         debug_print(f"WanTrainingModule.__init__: parsed {len(model_configs)} model_configs")
         self.pipe = WanVideoPipeline.from_pretrained(torch_dtype=torch.bfloat16, device="cpu", model_configs=model_configs)
         debug_print("WanTrainingModule.__init__: pipeline created")
-        
+
         # Training mode
         self.switch_pipe_to_training_mode(
             self.pipe, trainable_models,
@@ -115,6 +115,14 @@ if __name__ == "__main__":
         # WARNING: extremely noisy. Set include_libs=False to limit to repo files only.
         enable_line_tracing(include_libs=True)
         debug_print("train.py main: line tracing enabled via --debug_print_mode=lines")
+
+    # Set global flag for random weights if requested
+    if getattr(args, "skip_model_loading", False):
+        debug_print("train.py main: setting USE_RANDOM_WEIGHTS=True for fast dataloader testing")
+        from diffsynth.models.utils import USE_RANDOM_WEIGHTS
+        import diffsynth.models.utils as utils
+        utils.USE_RANDOM_WEIGHTS = True
+
     debug_print(f"train.py main: args parsed; dataset_base_path={args.dataset_base_path}, metadata={args.dataset_metadata_path}")
     dataset = UnifiedDataset(
         base_path=args.dataset_base_path,

@@ -54,7 +54,7 @@ from ..configs.model_config import model_loader_configs, huggingface_model_loade
 from .utils import load_state_dict, init_weights_on_device, hash_state_dict_keys, split_state_dict_with_prefix
 
 
-def load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device):
+def load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device, skip_weight_loading=False):
     debug_print(f"load_model_from_single_file: resource={model_resource} names={model_names}")
     loaded_model_names, loaded_models = [], []
     for model_name, model_class in zip(model_names, model_classes):
@@ -74,7 +74,10 @@ def load_model_from_single_file(state_dict, model_names, model_classes, model_re
             model = model_class(**extra_kwargs)
         if hasattr(model, "eval"):
             model = model.eval()
-        model.load_state_dict(model_state_dict, assign=True)
+        if not skip_weight_loading:
+            model.load_state_dict(model_state_dict, assign=True)
+        else:
+            print(f"        Skipping weight loading for {model_name} - using random initialization")
         model = model.to(dtype=torch_dtype, device=device)
         loaded_model_names.append(model_name)
         loaded_models.append(model)
@@ -179,16 +182,18 @@ class ModelDetectorFromSingleFile:
         return False
 
 
-    def load(self, file_path="", state_dict={}, device="cuda", torch_dtype=torch.float16, **kwargs):
+    def load(self, file_path="", state_dict={}, device="cuda", torch_dtype=torch.float16, skip_weight_loading=False, **kwargs):
         debug_print("ModelDetectorFromSingleFile.load")
-        if len(state_dict) == 0:
+        if len(state_dict) == 0 and not skip_weight_loading:
             state_dict = load_state_dict(file_path)
+        elif skip_weight_loading:
+            state_dict = {}  # Empty state dict when skipping weights
 
         # Load models with strict matching
         keys_hash_with_shape = hash_state_dict_keys(state_dict, with_shape=True)
         if keys_hash_with_shape in self.keys_hash_with_shape_dict:
             model_names, model_classes, model_resource = self.keys_hash_with_shape_dict[keys_hash_with_shape]
-            loaded_model_names, loaded_models = load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device)
+            loaded_model_names, loaded_models = load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device, skip_weight_loading)
             return loaded_model_names, loaded_models
 
         # Load models without strict matching
@@ -196,7 +201,7 @@ class ModelDetectorFromSingleFile:
         keys_hash = hash_state_dict_keys(state_dict, with_shape=False)
         if keys_hash in self.keys_hash_dict:
             model_names, model_classes, model_resource = self.keys_hash_dict[keys_hash]
-            loaded_model_names, loaded_models = load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device)
+            loaded_model_names, loaded_models = load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device, skip_weight_loading)
             return loaded_model_names, loaded_models
 
         return loaded_model_names, loaded_models
@@ -220,7 +225,7 @@ class ModelDetectorFromSplitedSingleFile(ModelDetectorFromSingleFile):
         return False
 
 
-    def load(self, file_path="", state_dict={}, device="cuda", torch_dtype=torch.float16, **kwargs):
+    def load(self, file_path="", state_dict={}, device="cuda", torch_dtype=torch.float16, skip_weight_loading=False, **kwargs):
         # Split the state_dict and load from each component
         splited_state_dict = split_state_dict_with_prefix(state_dict)
         valid_state_dict = {}
@@ -228,12 +233,12 @@ class ModelDetectorFromSplitedSingleFile(ModelDetectorFromSingleFile):
             if super().match(file_path, sub_state_dict):
                 valid_state_dict.update(sub_state_dict)
         if super().match(file_path, valid_state_dict):
-            loaded_model_names, loaded_models = super().load(file_path, valid_state_dict, device, torch_dtype)
+            loaded_model_names, loaded_models = super().load(file_path, valid_state_dict, device, torch_dtype, skip_weight_loading=skip_weight_loading)
         else:
             loaded_model_names, loaded_models = [], []
             for sub_state_dict in splited_state_dict:
                 if super().match(file_path, sub_state_dict):
-                    loaded_model_names_, loaded_models_ = super().load(file_path, valid_state_dict, device, torch_dtype)
+                    loaded_model_names_, loaded_models_ = super().load(file_path, valid_state_dict, device, torch_dtype, skip_weight_loading=skip_weight_loading)
                     loaded_model_names += loaded_model_names_
                     loaded_models += loaded_models_
         return loaded_model_names, loaded_models
@@ -408,7 +413,7 @@ class ModelManager:
                 print(f"    Cannot load LoRA: {file_path}")
 
 
-    def load_model(self, file_path, model_names=None, device=None, torch_dtype=None):
+    def load_model(self, file_path, model_names=None, device=None, torch_dtype=None, skip_weight_loading=False):
         print(f"Loading models from: {file_path}")
         debug_print(f"ModelManager.load_model: device={device} dtype={torch_dtype}")
         if device is None: device = self.device
@@ -427,7 +432,8 @@ class ModelManager:
                 model_names, models = model_detector.load(
                     file_path, state_dict,
                     device=device, torch_dtype=torch_dtype,
-                    allowed_model_names=model_names, model_manager=self
+                    allowed_model_names=model_names, model_manager=self,
+                    skip_weight_loading=skip_weight_loading
                 )
                 for model_name, model in zip(model_names, models):
                     self.model.append(model)

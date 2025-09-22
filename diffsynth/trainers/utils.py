@@ -635,6 +635,7 @@ def wan_parser():
     # Debug/logging
     parser.add_argument("--no_debug_print", action="store_true", default=False, help="Disable debug_print messages (does not affect line tracing).")
     parser.add_argument("--debug_print_mode", type=str, default="off", choices=["off", "lines"], help="Enable ultra-verbose line tracing (off|lines).")
+    parser.add_argument("--skip_model_loading", action="store_true", default=False, help="Skip loading actual model weights for dataloader debugging.")
     return parser
 
 

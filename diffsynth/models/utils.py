@@ -3,6 +3,9 @@ from safetensors import safe_open
 from contextlib import contextmanager
 import hashlib
 
+# Global flag for using random weights instead of loading from disk
+USE_RANDOM_WEIGHTS = False
+
 @contextmanager
 def init_weights_on_device(device = torch.device("meta"), include_buffers :bool = False):
     
@@ -62,22 +65,36 @@ def load_state_dict_from_folder(file_path, torch_dtype=None):
     return state_dict
 
 
-def load_state_dict(file_path, torch_dtype=None, device="cpu"):
+def load_state_dict(file_path, torch_dtype=None, device="cpu", use_random_weights=None):
+    if use_random_weights is None:
+        use_random_weights = USE_RANDOM_WEIGHTS
     if file_path.endswith(".safetensors"):
-        return load_state_dict_from_safetensors(file_path, torch_dtype=torch_dtype, device=device)
+        return load_state_dict_from_safetensors(file_path, torch_dtype=torch_dtype, device=device, use_random_weights=use_random_weights)
     else:
         return load_state_dict_from_bin(file_path, torch_dtype=torch_dtype, device=device)
 
 
-def load_state_dict_from_safetensors(file_path, torch_dtype=None, device="cpu"):
-    state_dict = {}
-    with safe_open(file_path, framework="pt", device=str(device)) as f:
+def load_state_dict_from_safetensors(file_path, torch_dtype=None, device="cpu", use_random_weights=False):
+    if use_random_weights:
+        # Use rp to load just metadata and create random tensors
         import rp
-        for k in rp.eta(f.keys(), f'LoRA LOADING'):
-            state_dict[k] = f.get_tensor(k)
-            # print("LOADED",k)
+        metadata = rp.load_safetensors(file_path, device=device, include_tensors=False, include_shapes=True, include_dtypes=True)
+        state_dict = {}
+        for k, info in rp.eta(metadata.items(), f'Random weights loading'):
+            # Create random tensor with same shape/dtype
+            state_dict[k] = torch.randn(info.shape, dtype=info.dtype, device=device)
             if torch_dtype is not None:
                 state_dict[k] = state_dict[k].to(torch_dtype)
+    else:
+        # Original loading with actual tensor data
+        state_dict = {}
+        with safe_open(file_path, framework="pt", device=str(device)) as f:
+            import rp
+            for k in rp.eta(f.keys(), f'LoRA LOADING'):
+                state_dict[k] = f.get_tensor(k)
+                # print("LOADED",k)
+                if torch_dtype is not None:
+                    state_dict[k] = state_dict[k].to(torch_dtype)
     return state_dict
 
 
