@@ -5,8 +5,7 @@ from ryan_utils import debug_print, enable_line_tracing, set_debug_print_ranks
 from diffsynth import load_state_dict
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
 from diffsynth.pipelines.wan_video_new import WanVideoUnit_WarpedNoiseInitializer
-from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser
-from diffsynth.trainers.unified_dataset import UnifiedDataset
+from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser, VideoDataset
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
@@ -147,24 +146,21 @@ if __name__ == "__main__":
             data_file_keys.append("noise")
             debug_print("train.py main: added 'noise' to data_file_keys for warped noise")
 
-    dataset = UnifiedDataset(
+    dataset = VideoDataset(
         base_path=args.dataset_base_path,
         metadata_path=args.dataset_metadata_path,
         repeat=args.dataset_repeat,
         data_file_keys=data_file_keys,
-        main_data_operator=UnifiedDataset.default_video_operator(
-            base_path=args.dataset_base_path,
-            max_pixels=args.max_pixels,
-            height=args.height,
-            width=args.width,
-            height_division_factor=16,
-            width_division_factor=16,
-            num_frames=args.num_frames,
-            time_division_factor=4,
-            time_division_remainder=1,
-        ),
+        max_pixels=args.max_pixels,
+        height=args.height,
+        width=args.width,
+        height_division_factor=16,
+        width_division_factor=16,
+        num_frames=args.num_frames,
+        time_division_factor=4,
+        time_division_remainder=1,
     )
-    debug_print(f"train.py main: dataset built; len={len(dataset)} load_from_cache={dataset.load_from_cache}")
+    debug_print(f"train.py main: dataset built; len={len(dataset)}")
     model = WanTrainingModule(
         model_paths=args.model_paths,
         model_id_with_origin_paths=args.model_id_with_origin_paths,

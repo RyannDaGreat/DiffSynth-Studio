@@ -187,7 +187,8 @@ class VideoDataset(torch.utils.data.Dataset):
         self.image_file_extension = image_file_extension
         self.video_file_extension = video_file_extension
         self.repeat = repeat
-        
+        self.load_from_cache = False  # VideoDataset doesn't use cache like UnifiedDataset
+
         if height is not None and width is not None:
             print("Height and width are fixed. Setting `dynamic_resolution` to False.")
             self.dynamic_resolution = False
