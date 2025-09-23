@@ -346,10 +346,15 @@ class WanVideoPipeline(BasePipeline):
         for model_config in model_configs:
             debug_print(f"WanVideoPipeline.from_pretrained: downloading/loading -> model_id={model_config.model_id} path={model_config.path} pattern={model_config.origin_file_pattern}")
             model_config.download_if_necessary(use_usp=use_usp)
+
+            # Check if we should skip weight loading for fast debugging
+            from ..models.utils import SKIP_MODEL_LOADING
+
             model_manager.load_model(
                 model_config.path,
                 device=model_config.offload_device or device,
-                torch_dtype=model_config.offload_dtype or torch_dtype
+                torch_dtype=model_config.offload_dtype or torch_dtype,
+                skip_weight_loading=SKIP_MODEL_LOADING
             )
         
         # Load models
@@ -373,9 +378,11 @@ class WanVideoPipeline(BasePipeline):
 
         # Initialize tokenizer
         debug_print("WanVideoPipeline.from_pretrained: downloading/fetching tokenizer")
-        tokenizer_config.download_if_necessary(use_usp=use_usp)
+        from ..models.utils import SKIP_MODEL_LOADING
+        if not SKIP_MODEL_LOADING:
+            tokenizer_config.download_if_necessary(use_usp=use_usp)
+            pipe.prompter.fetch_tokenizer(tokenizer_config.path)
         pipe.prompter.fetch_models(pipe.text_encoder)
-        pipe.prompter.fetch_tokenizer(tokenizer_config.path)
 
         if audio_processor_config is not None:
             debug_print("WanVideoPipeline.from_pretrained: downloading audio processor")

@@ -42,6 +42,13 @@ LOW_NOISE_MODEL_PATHS='[
 
 export PYTHONUNBUFFERED=1 #Print Immediately
 
+# Set to 1 to use random weights for fast dataloader debugging
+SKIP_MODEL_LOADING=0
+# SKIP_MODEL_LOADING=1
+
+# Control debug printing ranks (all, silent, or comma-separated like 0,1,2)
+DEBUG_PRINT_RANKS="all"
+
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export CUDA_VISIBLE_DEVICES=0
 
@@ -60,14 +67,9 @@ COMMON_ARGS=(
   --lora_base_model dit
   --extra_inputs input_image
   --lora_target_modules q,k,v,o,ffn.0,ffn.2
+  --debug_print_ranks "$DEBUG_PRINT_RANKS"
+  $([[ "$SKIP_MODEL_LOADING" == "1" ]] && echo "--skip_model_loading")
 )
-
-# Set to 1 to use random weights for fast dataloader debugging
-SKIP_MODEL_LOADING=0
-# SKIP_MODEL_LOADING=1
-
-# Control debug printing ranks (all, silent, or comma-separated like 0,1,2)
-DEBUG_PRINT_RANKS="all"
 # DEBUG_PRINT_RANKS="0"  # Only rank 0 prints
 # DEBUG_PRINT_RANKS="silent"  # No debug printing
 # DEBUG_PRINT_RANKS="0,1"  # Only ranks 0 and 1 print
@@ -83,7 +85,7 @@ ic CUDA_VISIBLE_DEVICES
 ic SKIP_MODEL_LOADING
 ic DEBUG_PRINT_RANKS
 ic PROJECT_NAME
-ic "${COMMON_ARGS[@]}"
+echo -e "\033[1;32m[ic] COMMON_ARGS=${COMMON_ARGS[*]}\033[0m"
 
 # # High-noise LoRA
 # accelerate launch examples/wanvideo/model_training/train.py \
@@ -100,8 +102,6 @@ accelerate launch examples/wanvideo/model_training/train.py \
   --model_paths "${LOW_NOISE_MODEL_PATHS}" \
   --max_timestep_boundary 1 \
   --min_timestep_boundary 0 \
-  --debug_print_ranks "$DEBUG_PRINT_RANKS" \
-  ${SKIP_MODEL_LOADING:+--skip_model_loading}
 
 #DOCUMENTATION:
 #    options:

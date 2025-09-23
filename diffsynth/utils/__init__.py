@@ -171,7 +171,8 @@ class ModelConfig:
             # Check model_id and origin_file_pattern
             if self.model_id is None:
                 raise ValueError(f"""No valid model files. Please use `ModelConfig(path="xxx")` or `ModelConfig(model_id="xxx/yyy", origin_file_pattern="zzz")`.""")
-            
+
+
             # Skip if not in rank 0
             if use_usp:
                 import torch.distributed as dist

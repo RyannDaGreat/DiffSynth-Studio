@@ -76,9 +76,10 @@ def load_model_from_single_file(state_dict, model_names, model_classes, model_re
             model = model.eval()
         if not skip_weight_loading:
             model.load_state_dict(model_state_dict, assign=True)
+            model = model.to(dtype=torch_dtype, device=device)
         else:
             print(f"        Skipping weight loading for {model_name} - using random initialization")
-        model = model.to(dtype=torch_dtype, device=device)
+            model = model.to_empty(device=device).to(dtype=torch_dtype)
         loaded_model_names.append(model_name)
         loaded_models.append(model)
     debug_print(f"load_model_from_single_file: loaded {loaded_model_names}")
@@ -184,10 +185,8 @@ class ModelDetectorFromSingleFile:
 
     def load(self, file_path="", state_dict={}, device="cuda", torch_dtype=torch.float16, skip_weight_loading=False, **kwargs):
         debug_print("ModelDetectorFromSingleFile.load")
-        if len(state_dict) == 0 and not skip_weight_loading:
+        if len(state_dict) == 0:
             state_dict = load_state_dict(file_path)
-        elif skip_weight_loading:
-            state_dict = {}  # Empty state dict when skipping weights
 
         # Load models with strict matching
         keys_hash_with_shape = hash_state_dict_keys(state_dict, with_shape=True)
@@ -204,7 +203,7 @@ class ModelDetectorFromSingleFile:
             loaded_model_names, loaded_models = load_model_from_single_file(state_dict, model_names, model_classes, model_resource, torch_dtype, device, skip_weight_loading)
             return loaded_model_names, loaded_models
 
-        return loaded_model_names, loaded_models
+        return [], []
 
 
 

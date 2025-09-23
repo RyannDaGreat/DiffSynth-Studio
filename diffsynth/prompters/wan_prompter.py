@@ -98,7 +98,7 @@ class WanPrompter(BasePrompter):
 
     def encode_prompt(self, prompt, positive=True, device="cuda"):
         prompt = self.process_prompt(prompt, positive=positive)
-        
+
         ids, mask = self.tokenizer(prompt, return_mask=True, add_special_tokens=True)
         ids = ids.to(device)
         mask = mask.to(device)

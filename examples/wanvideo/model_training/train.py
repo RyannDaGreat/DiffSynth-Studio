@@ -117,10 +117,12 @@ if __name__ == "__main__":
 
     # Set global flag for random weights if requested
     if getattr(args, "skip_model_loading", False):
-        debug_print("train.py main: setting USE_RANDOM_WEIGHTS=True for fast dataloader testing")
-        from diffsynth.models.utils import USE_RANDOM_WEIGHTS
+        debug_print("train.py main: setting SKIP_MODEL_LOADING=True for fast dataloader testing")
+        from diffsynth.models.utils import SKIP_MODEL_LOADING
         import diffsynth.models.utils as utils
-        utils.USE_RANDOM_WEIGHTS = True
+        utils.SKIP_MODEL_LOADING = True
+    else:
+        debug_print("train.py main: SKIP_MODEL_LOADING=False, using normal weight loading")
 
     debug_print(f"train.py main: args parsed; dataset_base_path={args.dataset_base_path}, metadata={args.dataset_metadata_path}")
     dataset = UnifiedDataset(

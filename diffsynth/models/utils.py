@@ -3,8 +3,8 @@ from safetensors import safe_open
 from contextlib import contextmanager
 import hashlib
 
-# Global flag for using random weights instead of loading from disk
-USE_RANDOM_WEIGHTS = False
+# Global flag for skipping model loading (uses random weights instead of loading from disk)
+SKIP_MODEL_LOADING = os.getenv('SKIP_MODEL_LOADING', '0') == '1'
 
 @contextmanager
 def init_weights_on_device(device = torch.device("meta"), include_buffers :bool = False):
@@ -67,11 +67,11 @@ def load_state_dict_from_folder(file_path, torch_dtype=None):
 
 def load_state_dict(file_path, torch_dtype=None, device="cpu", use_random_weights=None):
     if use_random_weights is None:
-        use_random_weights = USE_RANDOM_WEIGHTS
+        use_random_weights = SKIP_MODEL_LOADING
     if file_path.endswith(".safetensors"):
         return load_state_dict_from_safetensors(file_path, torch_dtype=torch_dtype, device=device, use_random_weights=use_random_weights)
     else:
-        return load_state_dict_from_bin(file_path, torch_dtype=torch_dtype, device=device)
+        return load_state_dict_from_bin(file_path, torch_dtype=torch_dtype, device=device, use_random_weights=use_random_weights)
 
 
 def load_state_dict_from_safetensors(file_path, torch_dtype=None, device="cpu", use_random_weights=False):
@@ -97,13 +97,68 @@ def load_state_dict_from_safetensors(file_path, torch_dtype=None, device="cpu", 
     return state_dict
 
 
-def load_state_dict_from_bin(file_path, torch_dtype=None, device="cpu"):
-    state_dict = torch.load(file_path, map_location=device, weights_only=True)
-    if torch_dtype is not None:
-        for i in state_dict:
-            if isinstance(state_dict[i], torch.Tensor):
-                state_dict[i] = state_dict[i].to(torch_dtype)
-    return state_dict
+def load_state_dict_from_bin(file_path, torch_dtype=None, device="cpu", use_random_weights=False):
+    if use_random_weights:
+        # Use global shapes cache
+        cache_file = "_shapes_cache.json"
+        file_key = os.path.abspath(file_path)
+
+        # Try to load from cache first
+        if os.path.exists(cache_file):
+            import json
+            import rp
+            try:
+                with open(cache_file, 'r') as f:
+                    cache_data = json.load(f)
+
+                if file_key in cache_data:
+                    shapes_data = cache_data[file_key]
+                    state_dict = {}
+                    for k, (shape, dtype_str) in rp.eta(shapes_data.items(), f'Random weights loading from .pth (cached)'):
+                        dtype = getattr(torch, dtype_str)
+                        target_dtype = torch_dtype if torch_dtype is not None else dtype
+                        state_dict[k] = torch.empty(shape, dtype=target_dtype, device=device)
+                    return state_dict
+            except:
+                pass
+
+        # Create cache entry for next time
+        from torch._subclasses.fake_tensor import FakeTensorMode
+        import rp
+        import json
+
+        with FakeTensorMode() as mode:
+            fake_state_dict = torch.load(file_path, map_location='cpu', weights_only=True)
+            shapes_data = {}
+            state_dict = {}
+            for k, v in rp.eta(fake_state_dict.items(), f'Random weights loading from .pth (creating cache)'):
+                if hasattr(v, 'shape') and hasattr(v, 'dtype'):
+                    shapes_data[k] = (list(v.shape), str(v.dtype).split('.')[-1])
+                    target_dtype = torch_dtype if torch_dtype is not None else v.dtype
+                    state_dict[k] = torch.empty(v.shape, dtype=target_dtype, device=device)
+                else:
+                    state_dict[k] = v
+
+            # Update cache file
+            try:
+                with open(cache_file, 'r') as f:
+                    cache_data = json.load(f)
+            except:
+                cache_data = {}
+
+            cache_data[file_key] = shapes_data
+            with open(cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            print(f"Updated shapes cache for: {file_path}")
+
+        return state_dict
+    else:
+        state_dict = torch.load(file_path, map_location=device, weights_only=True)
+        if torch_dtype is not None:
+            for i in state_dict:
+                if isinstance(state_dict[i], torch.Tensor):
+                    state_dict[i] = state_dict[i].to(torch_dtype)
+        return state_dict
 
 
 def search_for_embeddings(state_dict):
