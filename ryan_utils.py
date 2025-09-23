@@ -1,5 +1,9 @@
 import rp
 import sys, threading, linecache, os
+import time
+
+# Track start time for relative timestamps
+_START_TIME = time.time()
 
 # Global rank information
 import torch.distributed as dist
@@ -38,6 +42,24 @@ def debug_print(*args, **kwargs):
     # Check rank if using distributed training and ranks are specified
     if RANK is not None and _DEBUG_PRINT_RANKS is not None and RANK not in _DEBUG_PRINT_RANKS:
         return
+
+    # Build prefix with timestamp and rank (if applicable)
+    elapsed = time.time() - _START_TIME
+    hours = int(elapsed // 3600)
+    minutes = int((elapsed % 3600) // 60)
+    seconds = elapsed % 60
+    timestamp = f"{hours:02d}:{minutes:02d}:{seconds:05.2f}"
+
+    if RANK is not None:
+        prefix = f"[{timestamp}|R{RANK}]"
+    else:
+        prefix = f"[{timestamp}]"
+
+    # Prepend prefix to the first argument
+    if args:
+        args = (f"{prefix} {args[0]}",) + args[1:]
+    else:
+        args = (prefix,)
 
     # Ensure our style is applied while respecting caller kwargs
     kwargs.setdefault("style", "blue cyan italic")
