@@ -45,13 +45,29 @@ export PYTHONUNBUFFERED=1 #Print Immediately
 
 # Control debug printing ranks (all, silent, or comma-separated like 0,1,2)
 DEBUG_PRINT_RANKS="all"
+# DEBUG_PRINT_RANKS="silent"
+# DEBUG_PRINT_RANKS="0"
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export CUDA_VISIBLE_DEVICES=0
 
+# #Project: WEB360
+# PROJECT_NAME="Web360"
+# DATASET_METADATA_PATH="data/WEB360_Video_Dataset/metadata.csv"
+# DATASET_BASE_PATH="data/WEB360_Video_Dataset/WEB360/videos_480x832x49"
+# EXTRA_ARGS=()
+
+#Project: GWTF-Test
+PROJECT_NAME="GWTF_Dev"
+DATASET_METADATA_PATH="data/envato_noisewarp_dataset/metadata.csv"
+DATASET_BASE_PATH="data/envato_noisewarp_dataset/Noisewarp"
+EXTRA_ARGS=(
+  --use_warped_noise  # Uncomment to use pre-generated noise files instead of random noise
+)
+
 COMMON_ARGS=(
-  --dataset_base_path data/WEB360_Video_Dataset/WEB360/videos_480x832x49
-  --dataset_metadata_path data/WEB360_Video_Dataset/metadata.csv
+  --dataset_base_path $DATASET_BASE_PATH
+  --dataset_metadata_path $DATASET_METADATA_PATH
   --height 480
   --width 832
   --num_frames 49
@@ -65,15 +81,10 @@ COMMON_ARGS=(
   --extra_inputs input_image
   --lora_target_modules q,k,v,o,ffn.0,ffn.2
   --debug_print_ranks "$DEBUG_PRINT_RANKS"
-  # --use_warped_noise  # Uncomment to use pre-generated noise files instead of random noise
 )
 # DEBUG_PRINT_RANKS="0"  # Only rank 0 prints
 # DEBUG_PRINT_RANKS="silent"  # No debug printing
 # DEBUG_PRINT_RANKS="0,1"  # Only ranks 0 and 1 print
-
-#Determines how checkpoints will be saved
-PROJECT_NAME="Web360"
-PROJECT_NAME="ScratchDev"
 
 #Print things out
 ic HUG_DIR
@@ -82,22 +93,25 @@ ic CUDA_VISIBLE_DEVICES
 ic DEBUG_PRINT_RANKS
 ic PROJECT_NAME
 echo -e "\033[1;32m[ic] COMMON_ARGS=${COMMON_ARGS[*]}\033[0m"
+echo -e "\033[1;32m[ic] EXTRA_ARGS=${EXTRA_ARGS[*]}\033[0m"
 
-# # High-noise LoRA
-# accelerate launch examples/wanvideo/model_training/train.py \
-#   "${COMMON_ARGS[@]}" \
-#   --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora""$PROJECT_NAME" \
-#   --model_paths "${HIGH_NOISE_MODEL_PATHS}" \
-#   --max_timestep_boundary 0.358 \
-#   --min_timestep_boundary 0
-
-# Low-noise LoRA
+# High-noise LoRA
 accelerate launch examples/wanvideo/model_training/train.py \
   "${COMMON_ARGS[@]}" \
-  --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora_""$PROJECT_NAME" \
-  --model_paths "${LOW_NOISE_MODEL_PATHS}" \
-  --max_timestep_boundary 1 \
-  --min_timestep_boundary 0 \
+  "${EXTRA_ARGS[@]}" \
+  --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora""$PROJECT_NAME" \
+  --model_paths "${HIGH_NOISE_MODEL_PATHS}" \
+  --max_timestep_boundary 0.358 \
+  --min_timestep_boundary 0
+
+# # Low-noise LoRA
+# accelerate launch examples/wanvideo/model_training/train.py \
+#   "${COMMON_ARGS[@]}" \
+#   "${EXTRA_ARGS[@]}" \
+#   --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora_""$PROJECT_NAME" \
+#   --model_paths "${LOW_NOISE_MODEL_PATHS}" \
+#   --max_timestep_boundary 1 \
+#   --min_timestep_boundary 0 \
 
 #DOCUMENTATION:
 #    options:
