@@ -110,10 +110,10 @@ if __name__ == "__main__":
     parser = wan_parser()
     args = parser.parse_args()
     set_debug_print_ranks(args.debug_print_ranks)
-    if getattr(args, "debug_print_mode", "off") == "lines":
+    if getattr(args, "debug_print_line_tracing", False):
         # WARNING: extremely noisy. Set include_libs=False to limit to repo files only.
         enable_line_tracing(include_libs=True)
-        debug_print("train.py main: line tracing enabled via --debug_print_mode=lines")
+        debug_print("train.py main: line tracing enabled via --debug_print_line_tracing")
 
     # Set global flag for random weights if requested
     if getattr(args, "skip_model_loading", False):

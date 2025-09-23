@@ -633,7 +633,7 @@ def wan_parser():
     parser.add_argument("--dataset_num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay.")
     # Debug/logging
-    parser.add_argument("--debug_print_mode", type=str, default="off", choices=["off", "lines"], help="Enable ultra-verbose line tracing (off|lines).")
+    parser.add_argument("--debug_print_line_tracing", action="store_true", default=False, help="Enable ultra-verbose line tracing (prints every executed line).")
     parser.add_argument("--debug_print_ranks", type=str, default="all", help="Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''), comma-separated rank numbers like '0,1,2' (default: 'all').")
     parser.add_argument("--skip_model_loading", action="store_true", default=False, help="Skip loading actual model weights for dataloader debugging.")
     return parser
