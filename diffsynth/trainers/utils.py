@@ -576,12 +576,27 @@ def launch_training_task(
     model, optimizer, dataloader, scheduler = accelerator.prepare(model, optimizer, dataloader, scheduler)
     
     debug_print("launch_training_task: starting training loop")
+    first_batch_saved = False
     for epoch_id in range(num_epochs):
         debug_print(f"launch_training_task: epoch {epoch_id} start")
         for data in tqdm(dataloader):
             with accelerator.accumulate(model):
                 optimizer.zero_grad()
                 debug_print("launch_training_task: got a batch")
+
+                # Validation sampling: First batch always saved, then 1/1000 chance
+                if not first_batch_saved or torch.rand(1).item() < 0.001:
+                    import random, string, os
+                    random_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+                    os.makedirs("untracked/samples", exist_ok=True)
+
+                    if "video" in data:
+                        torch.save(data["video"], f"untracked/samples/{random_id}_video.pth")
+                    if "noise" in data:
+                        torch.save(data["noise"], f"untracked/samples/{random_id}_noise.pth")
+                    debug_print(f"launch_training_task: saved validation sample {random_id}")
+                    first_batch_saved = True
+
                 if dataset.load_from_cache:
                     loss = model({}, inputs=data)
                 else:
