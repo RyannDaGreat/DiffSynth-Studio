@@ -1180,6 +1180,7 @@ class TemporalTiler_BCTHW:
 
 
 def model_fn_wan_video(
+    """General WAN video model function for T2V/I2V. Used when audio_embeds is None."""
     dit: WanModel,
     motion_controller: WanMotionControllerModel = None,
     vace: VaceWanModel = None,
@@ -1369,6 +1370,7 @@ def model_fn_wan_video(
 
 
 def model_fn_wans2v(
+    """Specialized WAN speech-to-video model function. Used when audio_embeds is not None."""
     dit,
     latents,
     timestep,
