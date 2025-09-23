@@ -1180,7 +1180,6 @@ class TemporalTiler_BCTHW:
 
 
 def model_fn_wan_video(
-    """General WAN video model function for T2V/I2V. Used when audio_embeds is None."""
     dit: WanModel,
     motion_controller: WanMotionControllerModel = None,
     vace: VaceWanModel = None,
@@ -1208,6 +1207,7 @@ def model_fn_wan_video(
     fuse_vae_embedding_in_latents: bool = False,
     **kwargs,
 ):
+    """General WAN video model function for T2V/I2V. Used when audio_embeds is None."""
     if sliding_window_size is not None and sliding_window_stride is not None:
         model_kwargs = dict(
             dit=dit,
@@ -1370,7 +1370,6 @@ def model_fn_wan_video(
 
 
 def model_fn_wans2v(
-    """Specialized WAN speech-to-video model function. Used when audio_embeds is not None."""
     dit,
     latents,
     timestep,
@@ -1383,6 +1382,7 @@ def model_fn_wans2v(
     use_gradient_checkpointing=False,
     use_unified_sequence_parallel=False,
 ):
+    """Specialized WAN speech-to-video model function. Used when audio_embeds is not None."""
     if use_unified_sequence_parallel:
         import torch.distributed as dist
         from xfuser.core.distributed import (get_sequence_parallel_rank,
