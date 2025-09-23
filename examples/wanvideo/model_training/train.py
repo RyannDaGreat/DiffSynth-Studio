@@ -115,14 +115,6 @@ if __name__ == "__main__":
         enable_line_tracing(include_libs=True)
         debug_print("train.py main: line tracing enabled via --debug_print_line_tracing")
 
-    # Set global flag for random weights if requested
-    if getattr(args, "skip_model_loading", False):
-        debug_print("train.py main: setting SKIP_MODEL_LOADING=True for fast dataloader testing")
-        from diffsynth.models.utils import SKIP_MODEL_LOADING
-        import diffsynth.models.utils as utils
-        utils.SKIP_MODEL_LOADING = True
-    else:
-        debug_print("train.py main: SKIP_MODEL_LOADING=False, using normal weight loading")
 
     debug_print(f"train.py main: args parsed; dataset_base_path={args.dataset_base_path}, metadata={args.dataset_metadata_path}")
     dataset = UnifiedDataset(

@@ -42,9 +42,6 @@ LOW_NOISE_MODEL_PATHS='[
 
 export PYTHONUNBUFFERED=1 #Print Immediately
 
-# Set to 1 to use random weights for fast dataloader debugging
-SKIP_MODEL_LOADING=0
-# SKIP_MODEL_LOADING=1
 
 # Control debug printing ranks (all, silent, or comma-separated like 0,1,2)
 DEBUG_PRINT_RANKS="all"
@@ -68,7 +65,6 @@ COMMON_ARGS=(
   --extra_inputs input_image
   --lora_target_modules q,k,v,o,ffn.0,ffn.2
   --debug_print_ranks "$DEBUG_PRINT_RANKS"
-  $([[ "$SKIP_MODEL_LOADING" == "1" ]] && echo "--skip_model_loading")
 )
 # DEBUG_PRINT_RANKS="0"  # Only rank 0 prints
 # DEBUG_PRINT_RANKS="silent"  # No debug printing
@@ -82,7 +78,6 @@ PROJECT_NAME="ScratchDev"
 ic HUG_DIR
 ic HIGH_NOISE_MODEL_PATHS
 ic CUDA_VISIBLE_DEVICES
-ic SKIP_MODEL_LOADING
 ic DEBUG_PRINT_RANKS
 ic PROJECT_NAME
 echo -e "\033[1;32m[ic] COMMON_ARGS=${COMMON_ARGS[*]}\033[0m"
@@ -165,5 +160,3 @@ accelerate launch examples/wanvideo/model_training/train.py \
 #      --debug_print_ranks DEBUG_PRINT_RANKS
 #                            Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''),
 #                            comma-separated rank numbers like '0,1,2' (default: 'all').
-#      --skip_model_loading
-#                            Skip loading actual model weights for dataloader debugging.
