@@ -1,5 +1,6 @@
 import torch, torchvision, imageio, os, json, pandas
 import numpy as np
+import rp
 from ryan_utils import debug_print
 import imageio.v3 as iio
 from PIL import Image
@@ -138,16 +139,23 @@ class LoadVideo(DataProcessingOperator):
     def __call__(self, data: str):
         debug_print(f"LoadVideo: opening {data}")
         reader = imageio.get_reader(data)
-        num_frames = self.get_num_frames(reader)
-        debug_print(f"LoadVideo: will read {num_frames} frames from {data}")
+        total_frames = int(reader.count_frames())
+        target_frames = self.get_num_frames(reader)
+        debug_print(f"LoadVideo: will read {target_frames} frames from {total_frames} total frames in {data}")
+
+        # Use rp.resize_list to sample frames evenly across the video duration
+        # This ensures video and noise are temporally aligned
+        frame_indices = list(range(total_frames))
+        sampled_indices = rp.resize_list(frame_indices, target_frames)
+
         frames = []
-        for frame_id in range(num_frames):
+        for frame_id in sampled_indices:
             frame = reader.get_data(frame_id)
             frame = Image.fromarray(frame)
             frame = self.frame_processor(frame)
             frames.append(frame)
         reader.close()
-        debug_print(f"LoadVideo: finished {data}")
+        debug_print(f"LoadVideo: finished {data}, sampled frames at indices {sampled_indices[:5]}...{sampled_indices[-5:] if len(sampled_indices) > 10 else sampled_indices}")
         return frames
 
 
