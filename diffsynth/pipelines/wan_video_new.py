@@ -1,13 +1,16 @@
 import torch, warnings, glob, os, types
 from ryan_utils import debug_print
+from functools import partial
 import numpy as np
+import rp
+import rp.git.CommonSource.noise_warp
 from PIL import Image
-from einops import repeat, reduce
+from einops import repeat, reduce, rearrange
 from typing import Optional, Union
 from dataclasses import dataclass
 from modelscope import snapshot_download
-from einops import rearrange
-import numpy as np
+
+debug_print_noise = partial(debug_print, style="yellow")
 from PIL import Image
 from tqdm import tqdm
 from typing import Optional
@@ -549,7 +552,65 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
         if vace_reference_image is not None:
             noise = torch.concat((noise[:, :, -1:], noise[:, :, :-1]), dim=2)
         return {"noise": noise}
-    
+
+
+
+class WanVideoUnit_WarpedNoiseInitializer(PipelineUnit):
+    def __init__(self):
+        super().__init__(input_params=("height", "width", "num_frames", "warped_noise"))
+
+    def process(self, pipe: WanVideoPipeline, height, width, num_frames, warped_noise):
+
+        # Expected input format: (81, 60, 104, 16) = (T, H, W, C)
+        # Target format: (1, 16, length, 60, 104) = (B, C, LT, LH, LW)
+
+        H, W, T = height, width, num_frames
+        LC = pipe.vae.model.z_dim
+        B = 1
+        LT = (T - 1) // 4 + 1
+        LH = H // pipe.vae.upsampling_factor
+        LW = W // pipe.vae.upsampling_factor
+        expected_final_shape = (B, LC, LT, LH, LW)
+
+        debug_print_noise(f"WanVideoUnit_WarpedNoiseInitializer: received noise shape {warped_noise.shape}")
+        debug_print_noise(f"WanVideoUnit_WarpedNoiseInitializer: target final shape {expected_final_shape}")
+        debug_print_noise(f"WanVideoUnit_WarpedNoiseInitializer: parameters - H={H}, W={W}, T={T}, LT={LT}")
+
+        if warped_noise.dim() == 4:
+            # Convert from (T, H, W, LC) to (T, LC, H, W) for resize_list
+            noise = rearrange(warped_noise, 'T H W C -> T C H W')
+
+            # Resize temporal dimension to target length
+            noise = rp.resize_list(noise, LT)
+
+            # Convert directly to final format with batch dimension
+            noise = rearrange(noise, 'T C H W -> 1 C T H W')
+
+            debug_print_noise(f"WanVideoUnit_WarpedNoiseInitializer: converted shape {noise.shape}")
+
+            # Validate final shape
+            if noise.shape != expected_final_shape:
+                raise ValueError(f"Final noise shape {noise.shape} does not match expected {expected_final_shape}")
+
+        else:
+            raise ValueError(f"Expected 4D noise tensor with shape (T, H, W, C), got {warped_noise.shape}")
+
+        # Ensure proper device and dtype
+        noise = noise.to(dtype=pipe.torch_dtype, device=pipe.device)
+
+        # Apply random degradation by blending with new random noise
+        # degradation_alpha = 0 means pure warped noise, 1 means pure random noise
+        degradation_alpha = torch.rand(1).item()  # Random value between 0 and 1
+        debug_print_noise(f"WanVideoUnit_WarpedNoiseInitializer: applying degradation alpha={degradation_alpha:.3f}")
+
+        # Generate fresh random noise with same shape
+        random_noise = torch.randn_like(noise)
+
+        # Use variance-preserving blend from noise_warp
+        noise = rp.git.CommonSource.noise_warp.blend_noise(noise, random_noise, degradation_alpha)
+
+        debug_print_noise(f"WanVideoUnit_WarpedNoiseInitializer: final device={noise.device}, dtype={noise.dtype}")
+        return {"noise": noise}
 
 
 class WanVideoUnit_InputVideoEmbedder(PipelineUnit):

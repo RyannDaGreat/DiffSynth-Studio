@@ -1,4 +1,7 @@
 import imageio, os, torch, warnings, torchvision, argparse, json
+import numpy as np
+import rp
+from einops import rearrange
 from ryan_utils import debug_print
 from ..utils import ModelConfig
 from ..models.utils import load_state_dict
@@ -343,8 +346,24 @@ class VideoDataset(torch.utils.data.Dataset):
             return self.load_image(file_path)
         elif self.is_video(file_path):
             return self.load_video(file_path)
+        elif self.is_noise(file_path):
+            return self.load_noise(file_path)
         else:
             return None
+
+
+    def is_noise(self, file_path):
+        return file_path.lower().endswith('.npy')
+
+
+    def load_noise(self, file_path):
+        noise_array = np.load(file_path)
+        noise_tensor = torch.from_numpy(noise_array)
+
+        # Keep the noise in its original 4D format: (81, 60, 104, 16) = (T, H, W, C)
+        # The warped noise initializer will handle the conversion and resizing
+
+        return noise_tensor
 
 
     def __getitem__(self, data_id):
@@ -635,6 +654,8 @@ def wan_parser():
     # Debug/logging
     parser.add_argument("--debug_print_line_tracing", action="store_true", default=False, help="Enable ultra-verbose line tracing (prints every executed line).")
     parser.add_argument("--debug_print_ranks", type=str, default="all", help="Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''), comma-separated rank numbers like '0,1,2' (default: 'all').")
+    # Warped noise
+    parser.add_argument("--use_warped_noise", action="store_true", default=False, help="Use pre-generated noise files instead of random noise generation. Requires 'noise' field in dataset.")
     return parser
 
 

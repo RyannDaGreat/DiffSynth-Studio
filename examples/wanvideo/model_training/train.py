@@ -4,6 +4,7 @@ sys.path.append("/root/CleanCode/Github/DiffSynth-Studio")
 from ryan_utils import debug_print, enable_line_tracing, set_debug_print_ranks
 from diffsynth import load_state_dict
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
+from diffsynth.pipelines.wan_video_new import WanVideoUnit_WarpedNoiseInitializer
 from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser
 from diffsynth.trainers.unified_dataset import UnifiedDataset
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -21,6 +22,7 @@ class WanTrainingModule(DiffusionTrainingModule):
         extra_inputs=None,
         max_timestep_boundary=1.0,
         min_timestep_boundary=0.0,
+        use_warped_noise=False,
     ):
         super().__init__()
         # Load models
@@ -45,7 +47,18 @@ class WanTrainingModule(DiffusionTrainingModule):
         self.extra_inputs = extra_inputs.split(",") if extra_inputs is not None else []
         self.max_timestep_boundary = max_timestep_boundary
         self.min_timestep_boundary = min_timestep_boundary
-        debug_print(f"WanTrainingModule.__init__: extra_inputs={self.extra_inputs}, timestep_boundary=({self.min_timestep_boundary}, {self.max_timestep_boundary})")
+        self.use_warped_noise = use_warped_noise
+        debug_print(f"WanTrainingModule.__init__: extra_inputs={self.extra_inputs}, timestep_boundary=({self.min_timestep_boundary}, {self.max_timestep_boundary}), use_warped_noise={self.use_warped_noise}")
+
+        # Replace noise initializer if using warped noise
+        if self.use_warped_noise:
+            debug_print("WanTrainingModule.__init__: replacing noise initializer with warped noise version")
+            # Find and replace the noise initializer unit
+            for i, unit in enumerate(self.pipe.units):
+                if unit.__class__.__name__ == "WanVideoUnit_NoiseInitializer":
+                    self.pipe.units[i] = WanVideoUnit_WarpedNoiseInitializer()
+                    debug_print("WanTrainingModule.__init__: replaced WanVideoUnit_NoiseInitializer with WanVideoUnit_WarpedNoiseInitializer")
+                    break
         
         
     def forward_preprocess(self, data):
@@ -74,7 +87,16 @@ class WanTrainingModule(DiffusionTrainingModule):
             "max_timestep_boundary": self.max_timestep_boundary,
             "min_timestep_boundary": self.min_timestep_boundary,
         }
-        
+
+        # Add warped noise if using it
+        # Warped noise replaces random noise generation with pre-computed noise files
+        # This is useful for training with specific noise patterns (e.g., Envato dataset)
+        if self.use_warped_noise:
+            if "noise" not in data:
+                raise ValueError("--use_warped_noise requires 'noise' field in dataset, but it was not found")
+            inputs_shared["warped_noise"] = data["noise"]
+            debug_print(f"WanTrainingModule.forward_preprocess: using warped noise with shape {data['noise'].shape}")
+
         # Extra inputs
         for extra_input in self.extra_inputs:
             if extra_input == "input_image":
@@ -117,11 +139,19 @@ if __name__ == "__main__":
 
 
     debug_print(f"train.py main: args parsed; dataset_base_path={args.dataset_base_path}, metadata={args.dataset_metadata_path}")
+
+    # Add noise to data_file_keys if using warped noise
+    data_file_keys = args.data_file_keys.split(",")
+    if args.use_warped_noise:
+        if "noise" not in data_file_keys:
+            data_file_keys.append("noise")
+            debug_print("train.py main: added 'noise' to data_file_keys for warped noise")
+
     dataset = UnifiedDataset(
         base_path=args.dataset_base_path,
         metadata_path=args.dataset_metadata_path,
         repeat=args.dataset_repeat,
-        data_file_keys=args.data_file_keys.split(","),
+        data_file_keys=data_file_keys,
         main_data_operator=UnifiedDataset.default_video_operator(
             base_path=args.dataset_base_path,
             max_pixels=args.max_pixels,
@@ -147,6 +177,7 @@ if __name__ == "__main__":
         extra_inputs=args.extra_inputs,
         max_timestep_boundary=args.max_timestep_boundary,
         min_timestep_boundary=args.min_timestep_boundary,
+        use_warped_noise=args.use_warped_noise,
     )
     debug_print("train.py main: model created")
     model_logger = ModelLogger(

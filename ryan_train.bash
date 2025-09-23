@@ -65,6 +65,7 @@ COMMON_ARGS=(
   --extra_inputs input_image
   --lora_target_modules q,k,v,o,ffn.0,ffn.2
   --debug_print_ranks "$DEBUG_PRINT_RANKS"
+  # --use_warped_noise  # Uncomment to use pre-generated noise files instead of random noise
 )
 # DEBUG_PRINT_RANKS="0"  # Only rank 0 prints
 # DEBUG_PRINT_RANKS="silent"  # No debug printing
@@ -160,3 +161,17 @@ accelerate launch examples/wanvideo/model_training/train.py \
 #      --debug_print_ranks DEBUG_PRINT_RANKS
 #                            Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''),
 #                            comma-separated rank numbers like '0,1,2' (default: 'all').
+#      --use_warped_noise    Use pre-generated noise files instead of random noise generation.
+#                            Requires 'noise' field in dataset pointing to .npy files.
+#
+# WARPED NOISE DATASET CREATION:
+# To create a warped noise dataset like the Envato dataset:
+# 1. Install dependencies: pip install rp
+# 2. Use rp.git.CommonSource.noise_warp.get_noise_from_video() to extract noise from videos
+# 3. Expected format: .npy files with shape (81, 60, 104, 16) = (T, H, W, C)
+# 4. CSV metadata should include 'noise' column pointing to the .npy files
+# Example CSV:
+#   video,prompt,noise
+#   video001.mp4,"A beautiful sunset",noise001.npy
+#   video002.mp4,"Ocean waves",noise002.npy
+# The noise files are automatically resized to match training parameters (T, H, W, C) -> (B, C, T', H', W')
