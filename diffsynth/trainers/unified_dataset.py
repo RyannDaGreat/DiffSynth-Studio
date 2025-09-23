@@ -1,4 +1,5 @@
 import torch, torchvision, imageio, os, json, pandas
+import numpy as np
 from ryan_utils import debug_print
 import imageio.v3 as iio
 from PIL import Image
@@ -222,9 +223,19 @@ class RouteByType(DataProcessingOperator):
 class LoadTorchPickle(DataProcessingOperator):
     def __init__(self, map_location="cpu"):
         self.map_location = map_location
-        
+
     def __call__(self, data):
         return torch.load(data, map_location=self.map_location, weights_only=False)
+
+
+
+class LoadNoise(DataProcessingOperator):
+    def __call__(self, data):
+        debug_print(f"LoadNoise: opening {data}")
+        noise_array = np.load(data)
+        noise_tensor = torch.from_numpy(noise_array)
+        debug_print(f"LoadNoise: loaded shape {noise_tensor.shape} from {data}")
+        return noise_tensor
 
 
 
@@ -288,6 +299,7 @@ class UnifiedDataset(torch.utils.data.Dataset):
                     num_frames, time_division_factor, time_division_remainder,
                     frame_processor=ImageCropAndResize(height, width, max_pixels, height_division_factor, width_division_factor),
                 )),
+                (("npy",), LoadNoise()),
             ])),
         ])
         
