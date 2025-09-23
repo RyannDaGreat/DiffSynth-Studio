@@ -1,6 +1,6 @@
 !
 
-set -x # Print bash script out as it executes
+# set -x # Print bash script out as it executes
 
 #Copy Model To This Machine (Super Fast the Second Time)
 HUG_DIR=/huggingface_models
@@ -62,30 +62,45 @@ COMMON_ARGS=(
   --lora_target_modules q,k,v,o,ffn.0,ffn.2
 )
 
+# Set to 1 to use random weights for fast dataloader debugging
+SKIP_MODEL_LOADING=0
+# SKIP_MODEL_LOADING=1
+
+# Control debug printing ranks (all, silent, or comma-separated like 0,1,2)
+DEBUG_PRINT_RANKS="all"
+# DEBUG_PRINT_RANKS="0"  # Only rank 0 prints
+# DEBUG_PRINT_RANKS="silent"  # No debug printing
+# DEBUG_PRINT_RANKS="0,1"  # Only ranks 0 and 1 print
+
+#Determines how checkpoints will be saved
+PROJECT_NAME="Web360"
+PROJECT_NAME="ScratchDev"
+
 #Print things out
 ic HUG_DIR
 ic HIGH_NOISE_MODEL_PATHS
 ic CUDA_VISIBLE_DEVICES
+ic SKIP_MODEL_LOADING
+ic DEBUG_PRINT_RANKS
+ic PROJECT_NAME
 ic "${COMMON_ARGS[@]}"
 
 # # High-noise LoRA
 # accelerate launch examples/wanvideo/model_training/train.py \
 #   "${COMMON_ARGS[@]}" \
-#   --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora" \
+#   --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora""$PROJECT_NAME" \
 #   --model_paths "${HIGH_NOISE_MODEL_PATHS}" \
 #   --max_timestep_boundary 0.358 \
 #   --min_timestep_boundary 0
 
-# Set to 1 to use random weights for fast dataloader debugging
-SKIP_MODEL_LOADING=0
-
 # Low-noise LoRA
 accelerate launch examples/wanvideo/model_training/train.py \
   "${COMMON_ARGS[@]}" \
-  --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora" \
+  --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora_""$PROJECT_NAME" \
   --model_paths "${LOW_NOISE_MODEL_PATHS}" \
   --max_timestep_boundary 1 \
   --min_timestep_boundary 0 \
+  --debug_print_ranks "$DEBUG_PRINT_RANKS" \
   ${SKIP_MODEL_LOADING:+--skip_model_loading}
 
 #DOCUMENTATION:
@@ -145,5 +160,10 @@ accelerate launch examples/wanvideo/model_training/train.py \
 #                            Number of workers for data loading.
 #      --weight_decay WEIGHT_DECAY
 #                            Weight decay.
-#      --debug_print_mode {off,lines}
-#                            Enable ultra-verbose line tracing (off|lines).
+#      --debug_print_line_tracing
+#                            Enable ultra-verbose line tracing (prints every executed line).
+#      --debug_print_ranks DEBUG_PRINT_RANKS
+#                            Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''),
+#                            comma-separated rank numbers like '0,1,2' (default: 'all').
+#      --skip_model_loading
+#                            Skip loading actual model weights for dataloader debugging.
