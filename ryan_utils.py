@@ -1,21 +1,44 @@
 import rp
 import sys, threading, linecache, os
 
-# Global toggle for debug_print behavior
-_DEBUG_PRINT_ENABLED = True
+# Global rank information
+import torch.distributed as dist
+if dist.is_available() and dist.is_initialized():
+    RANK = dist.get_rank()
+    NUM_RANKS = dist.get_world_size()
+else:
+    RANK = None
+    NUM_RANKS = None
 
-def set_debug_print_enabled(enabled: bool) -> None:
-    """Enable or disable debug_print globally at runtime.
+# Global list of ranks that are allowed to print debug messages
+_DEBUG_PRINT_RANKS = None
 
-    When disabled, all calls to debug_print become no-ops.
+def set_debug_print_ranks(ranks_str: str) -> None:
+    """Set which ranks are allowed to print debug messages.
+
+    Args:
+        ranks_str: Comma-separated rank numbers, 'all', or 'silent'
+                  Examples: '0', '0,1,2', 'all', 'silent'
     """
-    global _DEBUG_PRINT_ENABLED
-    _DEBUG_PRINT_ENABLED = bool(enabled)
+    global _DEBUG_PRINT_RANKS
+
+    if ranks_str.lower() == 'silent' or ranks_str.strip() == '':
+        _DEBUG_PRINT_RANKS = []
+    elif ranks_str.lower() == 'all':
+        if NUM_RANKS is None:
+            _DEBUG_PRINT_RANKS = None
+        else:
+            _DEBUG_PRINT_RANKS = list(range(NUM_RANKS))
+    else:
+        _DEBUG_PRINT_RANKS = [int(rank.strip()) for rank in ranks_str.split(',') if rank.strip()]
+
 
 def debug_print(*args, **kwargs):
-    """Styled debug print that can be disabled via set_debug_print_enabled."""
-    if not _DEBUG_PRINT_ENABLED:
+    """Styled debug print with rank-based filtering."""
+    # Check rank if using distributed training and ranks are specified
+    if RANK is not None and _DEBUG_PRINT_RANKS is not None and RANK not in _DEBUG_PRINT_RANKS:
         return
+
     # Ensure our style is applied while respecting caller kwargs
     kwargs.setdefault("style", "blue cyan italic")
     return rp.fansi_print(*args, **kwargs)

@@ -633,8 +633,8 @@ def wan_parser():
     parser.add_argument("--dataset_num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay.")
     # Debug/logging
-    parser.add_argument("--no_debug_print", action="store_true", default=False, help="Disable debug_print messages (does not affect line tracing).")
     parser.add_argument("--debug_print_mode", type=str, default="off", choices=["off", "lines"], help="Enable ultra-verbose line tracing (off|lines).")
+    parser.add_argument("--debug_print_ranks", type=str, default="all", help="Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''), comma-separated rank numbers like '0,1,2' (default: 'all').")
     parser.add_argument("--skip_model_loading", action="store_true", default=False, help="Skip loading actual model weights for dataloader debugging.")
     return parser
 
@@ -670,7 +670,7 @@ def flux_parser():
     parser.add_argument("--dataset_num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay.")
     # Debug/logging
-    parser.add_argument("--no_debug_print", action="store_true", default=False, help="Disable debug_print messages (does not affect line tracing).")
+    parser.add_argument("--debug_print_ranks", type=str, default="all", help="Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''), comma-separated rank numbers like '0,1,2' (default: 'all').")
     return parser
 
 
@@ -707,6 +707,6 @@ def qwen_image_parser():
     parser.add_argument("--processor_path", type=str, default=None, help="Path to the processor. If provided, the processor will be used for image editing.")
     parser.add_argument("--enable_fp8_training", default=False, action="store_true", help="Whether to enable FP8 training. Only available for LoRA training on a single GPU.")
     # Debug/logging
-    parser.add_argument("--no_debug_print", action="store_true", default=False, help="Disable debug_print messages (does not affect line tracing).")
+    parser.add_argument("--debug_print_ranks", type=str, default="all", help="Which ranks to print debug messages from. Options: 'all', 'silent' (alias for ''), comma-separated rank numbers like '0,1,2' (default: 'all').")
     parser.add_argument("--task", type=str, default="sft", required=False, help="Task type.")
     return parser
