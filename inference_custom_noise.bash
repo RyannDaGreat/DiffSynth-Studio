@@ -10,7 +10,7 @@ ic() { for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
 
 # Define LoRA checkpoints from rp call download_to_cache
 LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-2750.safetensors" --show_progress True)
-LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev/step-2750.safetensors"  --show_progress True)
+LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev/step-2750.safetensors" --show_progress True)
 
 # Choose the content
 PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs down from a tall tree, moving with feline agility and precision. The cat grips the rough bark with its claws, methodically placing each paw as it descends through the dappled sunlight filtering through green leaves. Its alert eyes scan the ground below while its fluffy tail sways for balance in this natural outdoor woodland setting"
@@ -36,3 +36,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch --num_processes 8 --multi
     --input_image_path "$INPUT_IMAGE_PATH" \
     --noise_file "$NOISE_FILE" \
     --degradation "$DEGRADATION"
+
+rp call fansi_print --- "OUTPUT = $OUTPUT" "green green bold italic on dark dark blue"
+
