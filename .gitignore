@@ -30,3 +30,4 @@ models/train/Wan2.2-I2V-A14B_low_noise_lora
 data/WEB360_Video_Dataset/WEB360
 models/train
 untracked
+scratchpad.py
