@@ -12,6 +12,8 @@ ic() { for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
 NUM_FRAMES=49
 HEIGHT=480
 WIDTH=832
+CFG_SCALE=5.0
+NUM_INFERENCE_STEPS=50
 
 # Define LoRA checkpoints from rp call download_to_cache
 LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-4500.safetensors" --show_progress True)
@@ -19,17 +21,19 @@ LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_nois
 
 # Choose the content
 PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs down from a tall tree, moving with feline agility and precision. The cat grips the rough bark with its claws, methodically placing each paw as it descends through the dappled sunlight filtering through green leaves. Its alert eyes scan the ground below while its fluffy tail sways for balance in this natural outdoor woodland setting"
-OUTPUT="cat_climbing_down_tree.mp4"
+BASE_OUTPUT_NAME="cat_climbing_down_tree"
 INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832.png"
 
 # Custom noise file for warped noise
 WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
 DEGRADATION_ALPHA=0.0  # 0.0 = pure custom noise, 1.0 = pure random, unset = random alpha
 
+# Generate output filename with parameters
+OUTPUT="${BASE_OUTPUT_NAME}_${HEIGHT}×${WIDTH}×${NUM_FRAMES}_CFG${CFG_SCALE}_N${NUM_INFERENCE_STEPS}_D${DEGRADATION_ALPHA}.mp4"
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
-ic NUM_FRAMES HEIGHT WIDTH LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA
+ic NUM_FRAMES HEIGHT WIDTH CFG_SCALE NUM_INFERENCE_STEPS LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA
 
 # Run inference with custom noise
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 
@@ -43,6 +47,8 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_process
     --height "$HEIGHT" \
     --width "$WIDTH" \
     --num_frames "$NUM_FRAMES" \
+    --cfg_scale "$CFG_SCALE" \
+    --num_inference_steps "$NUM_INFERENCE_STEPS" \
     --warped_noise "$WARPED_NOISE" \
     --degradation_alpha "$DEGRADATION_ALPHA"
 
