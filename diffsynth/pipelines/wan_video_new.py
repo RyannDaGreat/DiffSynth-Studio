@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from modelscope import snapshot_download
 
 debug_print_noise = partial(debug_print, style="yellow")
+debug_print_warn = partial(debug_print, style="yellow orange italic")
 debug_print_noise_infer = partial(debug_print, style="green italic")
 from PIL import Image
 from tqdm import tqdm
@@ -572,17 +573,14 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
 
     @staticmethod
     def _process_noise_tensor(noise_tensor, num_frames, pipe, expected_shape, degradation_alpha):
-        if noise_tensor.dim() != 4:
-            raise ValueError(f"Expected 4D noise tensor (T, H, W, C), got {noise_tensor.shape}")
-
-        T_original = noise_tensor.shape[0]
         T_expected = (num_frames - 1) // 4 + 1
         noise = rearrange(noise_tensor, 'T H W C -> T C H W')
+        if len(noise) < T_expected: debug_print_warn(f"T_expected={T_expected} > len(noise)={len(noise)} - meaning duplicate noise frames")
         noise = rp.resize_list(noise, T_expected)
         noise = rearrange(noise, 'T C H W -> 1 C T H W')
         noise = noise.to(dtype=pipe.torch_dtype, device=pipe.device)
 
-        debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: resized noise from T={T_original} to T={T_expected}")
+        debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: resized noise from T={noise_tensor.shape[0]} to T={T_expected}")
 
         if degradation_alpha is None:
             degradation_alpha = torch.rand(1).item()
@@ -592,8 +590,13 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
             noise = rp.git.CommonSource.noise_warp.blend_noise(noise, random_noise, degradation_alpha)
             debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: applied degradation alpha {degradation_alpha}")
 
-        if noise.shape != expected_shape:
-            raise ValueError(f"Noise shape {noise.shape} doesn't match expected {expected_shape}")
+        # Compare input vs output shapes to show transformation
+        B_expected, C_expected, T_expected, H_expected, W_expected = expected_shape
+        rp.validate_tensor_shapes(
+            noise_tensor="torch:     T_in  H W C",
+            noise       ="torch: 1 C T_out H W  ",
+            T_out=T_expected, C=C_expected, H=H_expected, W=W_expected,
+        )
         return noise
 
 
