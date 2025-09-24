@@ -555,8 +555,12 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
         shape = (1, pipe.vae.model.z_dim, length, height // pipe.vae.upsampling_factor, width // pipe.vae.upsampling_factor)
 
         # Generate or load noise
-        if custom_noise_file is not None and os.path.exists(custom_noise_file):
+        if custom_noise_file is None:
+            # Use random noise generation
+            noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
+        else:
             debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: loading custom noise from {custom_noise_file}")
+            assert os.path.exists(custom_noise_file), custom_noise_file
 
             # Load custom noise
             custom_noise = np.load(custom_noise_file)
@@ -575,20 +579,15 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
             # Ensure correct device and dtype
             custom_noise = custom_noise.to(dtype=pipe.torch_dtype, device=pipe.device)
 
-            # Apply degradation if requested (mix with random noise)
-            if degradation_level > 0:
-                random_noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
-                noise = (1 - degradation_level) * custom_noise + degradation_level * random_noise
-                debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: applied degradation level {degradation_level}")
-            else:
-                noise = custom_noise
+            # Generate fresh random noise with same shape
+            random_noise = torch.randn_like(noise)
+
+            # Use variance-preserving blend from noise_warp
+            noise = rp.git.CommonSource.noise_warp.blend_noise(noise, random_noise, degradation_level)
 
             # Validate shape
             if noise.shape != shape:
                 raise ValueError(f"Custom noise shape {noise.shape} doesn't match expected {shape} after processing")
-        else:
-            # Use random noise generation
-            noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
 
         if vace_reference_image is not None:
             noise = torch.concat((noise[:, :, -1:], noise[:, :, :-1]), dim=2)
