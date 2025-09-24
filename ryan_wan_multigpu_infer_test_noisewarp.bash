@@ -18,24 +18,24 @@ OUTPUT="cat_climbing_down_tree.mp4"
 INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832.png"
 
 # Custom noise file for warped noise
-NOISE_FILE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
-DEGRADATION=0.0  # 0.0 = pure custom noise, 1.0 = pure random
+WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
+DEGRADATION_ALPHA=0.0  # 0.0 = pure custom noise, 1.0 = pure random, unset = random alpha
 
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
-ic LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH NOISE_FILE DEGRADATION
+ic LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA
 
 # Run inference with custom noise
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch --num_processes 8 --multi_gpu ryan_wan_multigpu_infer_test.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_processes 8 --multi_gpu ryan_wan_multigpu_infer_test.py \
     --root "$HUG_DIR/Wan2.2-I2V-A14B" \
     --lora_dit "$LORA_DIT" \
     --lora_dit2 "$LORA_DIT2" \
     --prompt "$PROMPT" \
     --output "$OUTPUT" \
     --input_image_path "$INPUT_IMAGE_PATH" \
-    --noise_file "$NOISE_FILE" \
-    --degradation "$DEGRADATION"
+    --warped_noise "$WARPED_NOISE" \
+    --degradation_alpha "$DEGRADATION_ALPHA"
 
 rp call fansi_print --- "OUTPUT = $OUTPUT" "green green bold italic on dark dark blue"
 

@@ -31,8 +31,8 @@ def main(
     seed: int = 0,
     tiled: bool = True,
     switch_DiT_boundary: float = 0.9,
-    noise_file: Optional[str] = None,
-    degradation: float = 0.0,
+    warped_noise: Optional[str] = None,
+    degradation_alpha: Optional[float] = 0.0,
 ):
     """Run multi-GPU inference with optional LoRAs for DiT and DiT2.
 
@@ -49,8 +49,8 @@ def main(
         seed: Random seed.
         tiled: Whether to enable tiling.
         switch_DiT_boundary: Switch boundary between DiT stages.
-        noise_file: Path to custom noise .npy file. Leave None for random noise.
-        degradation: Degradation level (0.0=pure custom noise, 1.0=pure random).
+        warped_noise: Path to custom noise .npy file or tensor. Leave None for random noise.
+        degradation_alpha: Degradation alpha (0.0=pure custom, 1.0=pure random, None=random alpha).
     """
 
     high_noise_files = sorted(glob.glob(f"{root}/high_noise_model/diffusion_pytorch_model-*.safetensors"))
@@ -101,8 +101,8 @@ def main(
         tiled=tiled,
         input_image=input_image,
         switch_DiT_boundary=switch_DiT_boundary,
-        custom_noise_file=noise_file,
-        degradation_level=degradation,
+        warped_noise=warped_noise,
+        degradation_alpha=degradation_alpha,
     )
 
     if not dist.is_available() or not dist.is_initialized() or dist.get_rank() == 0:
