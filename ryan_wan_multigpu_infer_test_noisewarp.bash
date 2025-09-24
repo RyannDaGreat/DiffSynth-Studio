@@ -8,8 +8,13 @@ rclone copy --progress --transfers 128 /root/CleanCode/Github/DiffSynth-Studio/h
 # Icecream equivalent for bash
 ic() { for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
 
+# Video parameters
+NUM_FRAMES=49
+HEIGHT=480
+WIDTH=832
+
 # Define LoRA checkpoints from rp call download_to_cache
-LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-2750.safetensors" --show_progress True)
+LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-4500.safetensors" --show_progress True)
 LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev/step-2750.safetensors" --show_progress True)
 
 # Choose the content
@@ -24,16 +29,20 @@ DEGRADATION_ALPHA=0.0  # 0.0 = pure custom noise, 1.0 = pure random, unset = ran
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
-ic LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA
+ic NUM_FRAMES HEIGHT WIDTH LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA
 
 # Run inference with custom noise
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_processes 8 --multi_gpu ryan_wan_multigpu_infer_test.py \
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_processes 8 --multi_gpu ryan_wan_multigpu_infer_test.py \
     --root "$HUG_DIR/Wan2.2-I2V-A14B" \
     --lora_dit "$LORA_DIT" \
     --lora_dit2 "$LORA_DIT2" \
     --prompt "$PROMPT" \
     --output "$OUTPUT" \
     --input_image_path "$INPUT_IMAGE_PATH" \
+    --height "$HEIGHT" \
+    --width "$WIDTH" \
+    --num_frames "$NUM_FRAMES" \
     --warped_noise "$WARPED_NOISE" \
     --degradation_alpha "$DEGRADATION_ALPHA"
 
