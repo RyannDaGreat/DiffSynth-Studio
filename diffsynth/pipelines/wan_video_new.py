@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from modelscope import snapshot_download
 
 debug_print_noise = partial(debug_print, style="yellow")
+debug_print_noise_infer = partial(debug_print, style="green italic")
 from PIL import Image
 from tqdm import tqdm
 from typing import Optional
@@ -427,6 +428,9 @@ class WanVideoPipeline(BasePipeline):
         # Randomness
         seed: Optional[int] = None,
         rand_device: Optional[str] = "cpu",
+        # Custom noise
+        custom_noise_file: Optional[str] = None,
+        degradation_level: Optional[float] = 0.0,
         # Shape
         height: Optional[int] = 480,
         width: Optional[int] = 832,
@@ -474,6 +478,7 @@ class WanVideoPipeline(BasePipeline):
             "camera_control_direction": camera_control_direction, "camera_control_speed": camera_control_speed, "camera_control_origin": camera_control_origin,
             "vace_video": vace_video, "vace_video_mask": vace_video_mask, "vace_reference_image": vace_reference_image, "vace_scale": vace_scale,
             "seed": seed, "rand_device": rand_device,
+            "custom_noise_file": custom_noise_file, "degradation_level": degradation_level,
             "height": height, "width": width, "num_frames": num_frames,
             "cfg_scale": cfg_scale, "cfg_merge": cfg_merge,
             "sigma_shift": sigma_shift,
@@ -541,14 +546,50 @@ class WanVideoUnit_ShapeChecker(PipelineUnit):
 
 class WanVideoUnit_NoiseInitializer(PipelineUnit):
     def __init__(self):
-        super().__init__(input_params=("height", "width", "num_frames", "seed", "rand_device", "vace_reference_image"))
+        super().__init__(input_params=("height", "width", "num_frames", "seed", "rand_device", "vace_reference_image", "custom_noise_file", "degradation_level"))
 
-    def process(self, pipe: WanVideoPipeline, height, width, num_frames, seed, rand_device, vace_reference_image):
+    def process(self, pipe: WanVideoPipeline, height, width, num_frames, seed, rand_device, vace_reference_image, custom_noise_file=None, degradation_level=0.0):
         length = (num_frames - 1) // 4 + 1
         if vace_reference_image is not None:
             length += 1
         shape = (1, pipe.vae.model.z_dim, length, height // pipe.vae.upsampling_factor, width // pipe.vae.upsampling_factor)
-        noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
+
+        # Generate or load noise
+        if custom_noise_file is not None and os.path.exists(custom_noise_file):
+            debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: loading custom noise from {custom_noise_file}")
+
+            # Load custom noise
+            custom_noise = np.load(custom_noise_file)
+            custom_noise = torch.from_numpy(custom_noise)
+
+            # Handle 4D noise (T, H, W, C) format - same as WarpedNoiseInitializer
+            if custom_noise.dim() == 4:
+                # Resize and rearrange to match expected shape
+                T_original = custom_noise.shape[0]
+                T_expected = (num_frames - 1) // 4 + 1
+                custom_noise = rearrange(custom_noise, 'T H W C -> T C H W')
+                custom_noise = rp.resize_list(custom_noise, T_expected)
+                custom_noise = rearrange(custom_noise, 'T C H W -> 1 C T H W')
+                debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: resized noise from T={T_original} to T={T_expected}")
+
+            # Ensure correct device and dtype
+            custom_noise = custom_noise.to(dtype=pipe.torch_dtype, device=pipe.device)
+
+            # Apply degradation if requested (mix with random noise)
+            if degradation_level > 0:
+                random_noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
+                noise = (1 - degradation_level) * custom_noise + degradation_level * random_noise
+                debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: applied degradation level {degradation_level}")
+            else:
+                noise = custom_noise
+
+            # Validate shape
+            if noise.shape != shape:
+                raise ValueError(f"Custom noise shape {noise.shape} doesn't match expected {shape} after processing")
+        else:
+            # Use random noise generation
+            noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
+
         if vace_reference_image is not None:
             noise = torch.concat((noise[:, :, -1:], noise[:, :, :-1]), dim=2)
         return {"noise": noise}
