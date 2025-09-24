@@ -4,7 +4,6 @@ sys.path.append("/root/CleanCode/Github/DiffSynth-Studio")
 from ryan_utils import debug_print, enable_line_tracing, set_debug_print_ranks
 from diffsynth import load_state_dict
 from diffsynth.pipelines.wan_video_new import WanVideoPipeline, ModelConfig
-from diffsynth.pipelines.wan_video_new import WanVideoUnit_WarpedNoiseInitializer
 from diffsynth.trainers.utils import DiffusionTrainingModule, ModelLogger, launch_training_task, wan_parser
 from diffsynth.trainers.unified_dataset import UnifiedDataset
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -50,15 +49,10 @@ class WanTrainingModule(DiffusionTrainingModule):
         self.use_warped_noise = use_warped_noise
         debug_print(f"WanTrainingModule.__init__: extra_inputs={self.extra_inputs}, timestep_boundary=({self.min_timestep_boundary}, {self.max_timestep_boundary}), use_warped_noise={self.use_warped_noise}")
 
-        # Replace noise initializer if using warped noise
+        # Note: WanVideoUnit_NoiseInitializer now handles both regular and warped noise automatically
+        # based on the warped_noise parameter, so no replacement needed
         if self.use_warped_noise:
-            debug_print("WanTrainingModule.__init__: replacing noise initializer with warped noise version")
-            # Find and replace the noise initializer unit
-            for i, unit in enumerate(self.pipe.units):
-                if unit.__class__.__name__ == "WanVideoUnit_NoiseInitializer":
-                    self.pipe.units[i] = WanVideoUnit_WarpedNoiseInitializer()
-                    debug_print("WanTrainingModule.__init__: replaced WanVideoUnit_NoiseInitializer with WanVideoUnit_WarpedNoiseInitializer")
-                    break
+            debug_print("WanTrainingModule.__init__: warped noise enabled - WanVideoUnit_NoiseInitializer will use warped noise automatically")
         
         
     def forward_preprocess(self, data):
