@@ -7,12 +7,12 @@ _START_TIME = time.time()
 
 # Global rank information
 import torch.distributed as dist
-if dist.is_available() and dist.is_initialized():
-    RANK = dist.get_rank()
-    NUM_RANKS = dist.get_world_size()
-else:
-    RANK = None
-    NUM_RANKS = None
+
+def _get_rank_info():
+    """Get current rank info, checking if distributed is initialized each time"""
+    if dist.is_available() and dist.is_initialized():
+        return dist.get_rank(), dist.get_world_size()
+    return None, None
 
 # Global list of ranks that are allowed to print debug messages
 _DEBUG_PRINT_RANKS = None
@@ -29,18 +29,18 @@ def set_debug_print_ranks(ranks_str: str) -> None:
     if ranks_str.lower() == 'silent' or ranks_str.strip() == '':
         _DEBUG_PRINT_RANKS = []
     elif ranks_str.lower() == 'all':
-        if NUM_RANKS is None:
-            _DEBUG_PRINT_RANKS = None
-        else:
-            _DEBUG_PRINT_RANKS = list(range(NUM_RANKS))
+        _DEBUG_PRINT_RANKS = None  # None means all ranks can print
     else:
         _DEBUG_PRINT_RANKS = [int(rank.strip()) for rank in ranks_str.split(',') if rank.strip()]
 
 
 def debug_print(*args, **kwargs):
     """Styled debug print with rank-based filtering."""
+    # Get current rank info dynamically
+    current_rank, _ = _get_rank_info()
+
     # Check rank if using distributed training and ranks are specified
-    if RANK is not None and _DEBUG_PRINT_RANKS is not None and RANK not in _DEBUG_PRINT_RANKS:
+    if current_rank is not None and _DEBUG_PRINT_RANKS is not None and current_rank not in _DEBUG_PRINT_RANKS:
         return
 
     # Build prefix with timestamp and rank (if applicable)
@@ -50,8 +50,8 @@ def debug_print(*args, **kwargs):
     seconds = elapsed % 60
     timestamp = f"{hours:02d}:{minutes:02d}:{seconds:05.2f}"
 
-    if RANK is not None:
-        prefix = f"[{timestamp}|R{RANK}]"
+    if current_rank is not None:
+        prefix = f"[{timestamp}|R{current_rank}]"
     else:
         prefix = f"[{timestamp}]"
 
