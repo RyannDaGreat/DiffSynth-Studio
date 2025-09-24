@@ -12,7 +12,7 @@ ic() { for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
 NUM_FRAMES=49
 HEIGHT=480
 WIDTH=832
-CFG_SCALE=5.0
+CFG_SCALE=5
 NUM_INFERENCE_STEPS=50
 
 # Define LoRA checkpoints from rp call download_to_cache
@@ -26,10 +26,10 @@ INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video
 
 # Custom noise file for warped noise
 WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
-DEGRADATION_ALPHA=0.0  # 0.0 = pure custom noise, 1.0 = pure random, unset = random alpha
+DEGRADATION_ALPHA=0  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
 # Generate output filename with parameters
-OUTPUT="${BASE_OUTPUT_NAME}_${HEIGHT}×${WIDTH}×${NUM_FRAMES}_CFG${CFG_SCALE}_N${NUM_INFERENCE_STEPS}_D${DEGRADATION_ALPHA}.mp4"
+OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},D=${DEGRADATION_ALPHA}>.mp4"
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
