@@ -13,8 +13,8 @@ NUM_FRAMES=49
 HEIGHT=480
 WIDTH=832
 CFG_SCALE=5
-NUM_INFERENCE_STEPS=20
 NUM_INFERENCE_STEPS=50
+SEED=42
 
 # Define LoRA checkpoints from rp call download_to_cache
 LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-4500.safetensors" --show_progress True)
@@ -33,7 +33,7 @@ DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random 
 #DEGRADATION_ALPHA=1  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
 # Generate output filename with parameters
-OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},D=${DEGRADATION_ALPHA}>.mp4"
+OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA}>.mp4"
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
@@ -49,7 +49,7 @@ if (( NUM_PROCESSES == 1 )); then
   export MASTER_PORT=${MASTER_PORT:-29500}
 fi
 
-ic NUM_FRAMES HEIGHT WIDTH CFG_SCALE NUM_INFERENCE_STEPS LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA CUDA_VISIBLE_DEVICES NUM_PROCESSES
+ic NUM_FRAMES HEIGHT WIDTH CFG_SCALE NUM_INFERENCE_STEPS SEED LORA_DIT LORA_DIT2 HUG_DIR PROMPT OUTPUT INPUT_IMAGE_PATH WARPED_NOISE DEGRADATION_ALPHA CUDA_VISIBLE_DEVICES NUM_PROCESSES
 
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_processes $NUM_PROCESSES $([ "$NUM_PROCESSES" -gt 1 ] && echo --multi_gpu) ryan_wan_multigpu_infer_test.py \
     --root "$HUG_DIR/Wan2.2-I2V-A14B" \
@@ -58,6 +58,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_process
     --prompt "$PROMPT" \
     --output "$OUTPUT" \
     --input_image_path "$INPUT_IMAGE_PATH" \
+    --seed "$SEED" \
     --height "$HEIGHT" \
     --width "$WIDTH" \
     --num_frames "$NUM_FRAMES" \
