@@ -68,6 +68,8 @@ DATASET_BASE_PATH="data/envato_noisewarp_dataset/Noisewarp"
 EXTRA_ARGS=(
   --use_warped_noise  # Uncomment to use pre-generated noise files instead of random noise
 )
+RESUME=0  # Set to 1 to resume from latest checkpoint
+TRAIN_LOW_NOISE=0  # Set to 1 to train low noise model instead of high noise
 ACCELERATE_ARGS=(
   #Comment out the ones you don't want to use
   --use_fsdp #Fully Sharded Data Parallel
@@ -97,13 +99,41 @@ COMMON_ARGS=(
 # DEBUG_PRINT_RANKS="silent"  # No debug printing
 # DEBUG_PRINT_RANKS="0,1"  # Only ranks 0 and 1 print
 
+# Set model paths and output based on noise type
+if [ "$TRAIN_LOW_NOISE" = "1" ]; then
+  MODEL_PATHS="$LOW_NOISE_MODEL_PATHS"
+  OUTPUT_PATH="./models/train/Wan2.2-I2V-A14B_low_noise_lora$PROJECT_NAME"
+  MAX_TIMESTEP=1
+  MIN_TIMESTEP=0
+else
+  MODEL_PATHS="$HIGH_NOISE_MODEL_PATHS"
+  OUTPUT_PATH="./models/train/Wan2.2-I2V-A14B_high_noise_lora$PROJECT_NAME"
+  MAX_TIMESTEP=0.358
+  MIN_TIMESTEP=0
+fi
+
+# Find latest checkpoint if resuming
+LORA_CHECKPOINT=""
+if [ "$RESUME" = "1" ]; then
+  if [ -d "$OUTPUT_PATH" ]; then
+    LATEST_CHECKPOINT=$(ls "$OUTPUT_PATH"/step-*.safetensors 2>/dev/null | sort -V | tail -1)
+    if [ -n "$LATEST_CHECKPOINT" ]; then
+      LORA_CHECKPOINT="--lora_checkpoint $LATEST_CHECKPOINT"
+      ic LATEST_CHECKPOINT
+    fi
+  fi
+fi
+
 #Print things out
 ic HUG_DIR
-ic HIGH_NOISE_MODEL_PATHS
 ic CUDA_VISIBLE_DEVICES
 ic DEBUG_PRINT_RANKS
 ic PROJECT_NAME
+ic RESUME TRAIN_LOW_NOISE
 ic USE_FSDP USE_DEEPSPEED MIXED_PRECISION
+ic MODEL_PATHS OUTPUT_PATH MAX_TIMESTEP MIN_TIMESTEP
+icl HIGH_NOISE_MODEL_PATHS
+icl LOW_NOISE_MODEL_PATHS
 icl ACCELERATE_ARGS
 icl COMMON_ARGS
 icl EXTRA_ARGS
@@ -114,10 +144,11 @@ accelerate launch \
   examples/wanvideo/model_training/train.py \
   "${COMMON_ARGS[@]}" \
   "${EXTRA_ARGS[@]}" \
-  --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora""$PROJECT_NAME" \
-  --model_paths "${HIGH_NOISE_MODEL_PATHS}" \
-  --max_timestep_boundary 0.358 \
-  --min_timestep_boundary 0
+  $LORA_CHECKPOINT \
+  --output_path "$OUTPUT_PATH" \
+  --model_paths "$MODEL_PATHS" \
+  --max_timestep_boundary $MAX_TIMESTEP \
+  --min_timestep_boundary $MIN_TIMESTEP
 
 # # Low-noise LoRA
 # accelerate launch examples/wanvideo/model_training/train.py \
