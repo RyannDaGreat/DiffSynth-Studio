@@ -544,6 +544,21 @@ class WanVideoUnit_ShapeChecker(PipelineUnit):
 
 
 
+#ORIGINAL CLASS - JUST KEPT HERE FOR REFERENCE
+class WanVideoUnit_NoiseInitializer_UnusedOriginal(PipelineUnit):
+    def __init__(self):
+        super().__init__(input_params=("height", "width", "num_frames", "seed", "rand_device", "vace_reference_image"))
+
+    def process(self, pipe: WanVideoPipeline, height, width, num_frames, seed, rand_device, vace_reference_image):
+        length = (num_frames - 1) // 4 + 1
+        if vace_reference_image is not None:
+            length += 1
+        shape = (1, pipe.vae.model.z_dim, length, height // pipe.vae.upsampling_factor, width // pipe.vae.upsampling_factor)
+        noise = pipe.generate_noise(shape, seed=seed, rand_device=rand_device)
+        if vace_reference_image is not None:
+            noise = torch.concat((noise[:, :, -1:], noise[:, :, :-1]), dim=2)
+        return {"noise": noise}
+     
 class WanVideoUnit_NoiseInitializer(PipelineUnit):
     def __init__(self):
         super().__init__(input_params=("height", "width", "num_frames", "seed", "vace_reference_image", "warped_noise", "degradation_alpha"))
@@ -554,8 +569,9 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
             length += 1
         shape = (1, pipe.vae.model.z_dim, length, height // pipe.vae.upsampling_factor, width // pipe.vae.upsampling_factor)
 
+        noise = pipe.generate_noise(shape, seed=seed, device=pipe.device)
         if warped_noise is None:
-            noise = pipe.generate_noise(shape, seed=seed, device=pipe.device, dtype=pipe.torch_dtype)
+            noise = pipe.generate_noise(shape, seed=seed, device=pipe.device)
         else:
             if isinstance(warped_noise, str):
                 warped_noise = self._load_noise_file(warped_noise)

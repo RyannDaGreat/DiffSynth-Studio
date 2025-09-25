@@ -5,6 +5,7 @@ from einops import repeat, reduce
 from typing import Optional, Union
 from dataclasses import dataclass
 from modelscope import snapshot_download
+from ryan_utils import debug_print
 import numpy as np
 from PIL import Image
 from typing import Optional
@@ -116,6 +117,7 @@ class BasePipeline(torch.nn.Module):
 
     def generate_noise(self, shape, seed=None, rand_device="cpu", rand_torch_dtype=torch.float32, device=None, torch_dtype=None):
         # Initialize Gaussian noise
+        debug_print(f"SEED SEED SEED SEED IS {seed}",style='yellow green bold italic on dark dark red')
         generator = None if seed is None else torch.Generator(rand_device).manual_seed(seed)
         noise = torch.randn(shape, generator=generator, device=rand_device, dtype=rand_torch_dtype)
         noise = noise.to(dtype=torch_dtype or self.torch_dtype, device=device or self.device)
