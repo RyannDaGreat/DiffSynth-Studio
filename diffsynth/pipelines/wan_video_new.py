@@ -569,47 +569,45 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
             length += 1
         shape = (1, pipe.vae.model.z_dim, length, height // pipe.vae.upsampling_factor, width // pipe.vae.upsampling_factor)
 
-        noise = pipe.generate_noise(shape, seed=seed, device=pipe.device)
         if warped_noise is None:
             noise = pipe.generate_noise(shape, seed=seed, device=pipe.device)
         else:
-            if isinstance(warped_noise, str):
-                warped_noise = self._load_noise_file(warped_noise)
-            noise = self._process_noise_tensor(warped_noise, num_frames, pipe, shape, degradation_alpha)
+            noise = self._process_noise_tensor(warped_noise, pipe, shape, degradation_alpha, seed)
 
         if vace_reference_image is not None:
             noise = torch.concat((noise[:, :, -1:], noise[:, :, :-1]), dim=2)
         return {"noise": noise}
 
-    @staticmethod
-    def _load_noise_file(noise_file_path):
+    def _load_noise_file(self, noise_file_path):
         debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: loading noise from {noise_file_path}")
         custom_noise = np.load(noise_file_path)
         return torch.from_numpy(custom_noise)
 
-    @staticmethod
-    def _process_noise_tensor(noise_tensor, num_frames, pipe, expected_shape, degradation_alpha):
-        T_expected = (num_frames - 1) // 4 + 1
-        noise = rearrange(noise_tensor, 'T H W C -> T C H W')
+    def _process_noise_tensor(self, warped_noise, pipe, expected_shape, degradation_alpha, seed):
+        B_expected, C_expected, T_expected, H_expected, W_expected = expected_shape
+
+        if isinstance(warped_noise, str):
+            warped_noise = self._load_noise_file(warped_noise)
+
+        noise = rearrange(warped_noise, 'T H W C -> T C H W')
         if len(noise) < T_expected: debug_print_warn(f"T_expected={T_expected} > len(noise)={len(noise)} - meaning duplicate noise frames")
         noise = rp.resize_list(noise, T_expected)
         noise = rearrange(noise, 'T C H W -> 1 C T H W')
         noise = noise.to(dtype=pipe.torch_dtype, device=pipe.device)
 
-        debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: resized noise from T={noise_tensor.shape[0]} to T={T_expected}")
+        debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: resized noise from T={warped_noise.shape[0]} to T={T_expected}")
 
         if degradation_alpha is None:
-            degradation_alpha = torch.rand(1).item()
+            degradation_alpha = pipe.generate_noise((1,), seed=seed, seed_shift=1).item()
 
         if degradation_alpha > 0:
-            random_noise = torch.randn_like(noise)
-            noise = rp.git.CommonSource.noise_warp.blend_noise(noise, random_noise, degradation_alpha)
+            fresh_noise = pipe.generate_noise(expected_shape, seed=seed, device=pipe.device, seed_shift=0)
+            noise = rp.git.CommonSource.noise_warp.blend_noise(noise, fresh_noise, degradation_alpha)
             debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: applied degradation alpha {degradation_alpha}")
 
         # Compare input vs output shapes to show transformation
-        B_expected, C_expected, T_expected, H_expected, W_expected = expected_shape
         rp.validate_tensor_shapes(
-            noise_tensor="torch:     T_in  H W C",
+            warped_noise="torch:     T_in  H W C",
             noise       ="torch: 1 C T_out H W  ",
             T_out=T_expected, C=C_expected, H=H_expected, W=W_expected,
         )

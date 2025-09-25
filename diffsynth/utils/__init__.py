@@ -115,10 +115,10 @@ class BasePipeline(torch.nn.Module):
                         model.to(self.device)
 
 
-    def generate_noise(self, shape, seed=None, rand_device="cpu", rand_torch_dtype=torch.float32, device=None, torch_dtype=None):
+    def generate_noise(self, shape, seed=None, rand_device="cpu", rand_torch_dtype=torch.float32, device=None, torch_dtype=None, seed_shift=0):
         # Initialize Gaussian noise
-        debug_print(f"SEED SEED SEED SEED IS {seed}",style='yellow green bold italic on dark dark red')
-        generator = None if seed is None else torch.Generator(rand_device).manual_seed(seed)
+        debug_print(f"SEED SEED SEED SEED IS {seed} AND SHAPE IS {shape} AND SEED SHIFT IS {seed_shift}",style='yellow green bold italic on dark dark red')
+        generator = None if seed is None else torch.Generator(rand_device).manual_seed(seed+seed_shift)
         noise = torch.randn(shape, generator=generator, device=rand_device, dtype=rand_torch_dtype)
         noise = noise.to(dtype=torch_dtype or self.torch_dtype, device=device or self.device)
         return noise
