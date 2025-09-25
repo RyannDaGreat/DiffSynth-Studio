@@ -120,17 +120,35 @@ if [ "$RESUME" = "1" ]; then
 fi
 
 #Print things out
-ic HUG_DIR
-ic CUDA_VISIBLE_DEVICES
-ic DEBUG_PRINT_RANKS
-ic PROJECT_NAME
-ic RESUME TRAIN_LOW_NOISE
-ic MODEL_PATHS OUTPUT_PATH MAX_TIMESTEP MIN_TIMESTEP
-icl HIGH_NOISE_MODEL_PATHS
-icl LOW_NOISE_MODEL_PATHS
-icl ACCELERATE_ARGS
-icl COMMON_ARGS
-icl EXTRA_ARGS
+print_status() {
+  ic HUG_DIR
+  ic CUDA_VISIBLE_DEVICES
+  ic DEBUG_PRINT_RANKS
+  ic PROJECT_NAME
+  ic RESUME TRAIN_LOW_NOISE
+  ic MODEL_PATHS OUTPUT_PATH MAX_TIMESTEP MIN_TIMESTEP
+  icl HIGH_NOISE_MODEL_PATHS
+  icl LOW_NOISE_MODEL_PATHS
+  icl ACCELERATE_ARGS
+  icl COMMON_ARGS
+  icl EXTRA_ARGS
+}
+
+# Print immediately
+print_status
+
+# Start background timer to print every minute
+(
+  while true; do
+    sleep 60
+    echo -e "\033[1;33m[STATUS UPDATE @ $(date '+%H:%M:%S')]\033[0m"
+    print_status
+  done
+) &
+TIMER_PID=$!
+
+# Kill timer on exit
+trap "kill $TIMER_PID 2>/dev/null" EXIT
 
 accelerate launch \
   "${ACCELERATE_ARGS[@]}" \
