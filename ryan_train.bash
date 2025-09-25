@@ -10,7 +10,7 @@ rclone copy --progress --transfers 128  /root/CleanCode/Github/DiffSynth-Studio/
 #Icecream equivalent for bash
 # ic() { for v in "$@"; do echo "[ic] $v=${!v}"; done; }
 ic(){ for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
-icl(){ local name="$1"; local -n arr="$1"; echo -e "\033[1;32m[ic] $name:\033[0m"; printf "\033[1;32m  %s\033[0m\n" "${arr[@]}"; }
+icl(){ local name="$1"; local -n arr="$1"; echo -e "\033[1;32m[ic] $name:\033[0m"; for ((i=0; i<${#arr[@]}; i+=2)); do printf "\033[1;32m  %s %s\033[0m\n" "${arr[i]}" "${arr[i+1]:-}"; done; }
 
 
 #Custom model path locations
