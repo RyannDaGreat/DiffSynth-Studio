@@ -506,8 +506,39 @@ class ModelLogger:
         self.output_path = output_path
         self.remove_prefix_in_ckpt = remove_prefix_in_ckpt
         self.state_dict_converter = state_dict_converter
-        self.num_steps = 0
+        self.num_steps = self._find_latest_step()
 
+    def _find_latest_step(self):
+        """Find the highest step number from existing checkpoints."""
+        import glob
+        import re
+        from ryan_utils import debug_print
+        from functools import partial
+        debug_print_find_latest_step = partial(debug_print, style='blue blue')
+
+        debug_print_find_latest_step(f"ModelLogger._find_latest_step: checking {self.output_path}")
+        if not os.path.exists(self.output_path):
+            debug_print_find_latest_step("ModelLogger._find_latest_step: output path doesn't exist, starting from step 0")
+            return 0
+        step_files = glob.glob(os.path.join(self.output_path, "step-*.safetensors"))
+        debug_print_find_latest_step(f"ModelLogger._find_latest_step: found {len(step_files)} step files")
+        if not step_files:
+            debug_print_find_latest_step("ModelLogger._find_latest_step: no step files found, starting from step 0")
+            return 0
+        steps = []
+        for f in step_files:
+            match = re.search(r'step-(\d+)\.safetensors', f)
+            if match:
+                step_num = int(match.group(1))
+                steps.append(step_num)
+                debug_print_find_latest_step(f"ModelLogger._find_latest_step: found {os.path.basename(f)} -> step {step_num}")
+        max_step = max(steps) if steps else 0
+        if max_step > 0:
+            debug_print_find_latest_step(f"Resuming from step {max_step} based on existing checkpoints in {self.output_path}")
+            debug_print_find_latest_step(f"ModelLogger._find_latest_step: resuming from step {max_step}")
+        else:
+            debug_print_find_latest_step("ModelLogger._find_latest_step: no valid step numbers found, starting from step 0")
+        return max_step
 
     def on_step_end(self, accelerator, model, save_steps=None):
         self.num_steps += 1

@@ -114,6 +114,7 @@ if [ "$RESUME" = "1" ]; then
     if [ -n "$LATEST_CHECKPOINT" ]; then
       LORA_CHECKPOINT="--lora_checkpoint $LATEST_CHECKPOINT"
       ic LATEST_CHECKPOINT
+      echo -e "\033[1;32m[INFO] Will resume from checkpoint and continue from existing step number\033[0m"
     fi
   fi
 fi
