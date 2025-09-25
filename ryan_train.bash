@@ -49,7 +49,6 @@ DEBUG_PRINT_RANKS="all"
 # DEBUG_PRINT_RANKS="silent"
 # DEBUG_PRINT_RANKS="0"
 
-
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export CUDA_VISIBLE_DEVICES=0
 
@@ -70,9 +69,9 @@ RESUME=0  # Set to 1 to resume from latest checkpoint
 TRAIN_LOW_NOISE=0  # Set to 1 to train low noise model instead of high noise
 ACCELERATE_ARGS=(
   #Comment out the ones you don't want to use
-  --use_fsdp #Fully Sharded Data Parallel
+  # --use_fsdp #Fully Sharded Data Parallel
   # --use_deepspeed #Idk what this does really...
-  --mixed_precision "yes"
+  # --mixed_precision "yes"
 )
 
 COMMON_ARGS=(
@@ -93,9 +92,6 @@ COMMON_ARGS=(
   --lora_target_modules q,k,v,o,ffn.0,ffn.2
   --debug_print_ranks "$DEBUG_PRINT_RANKS"
 )
-# DEBUG_PRINT_RANKS="0"  # Only rank 0 prints
-# DEBUG_PRINT_RANKS="silent"  # No debug printing
-# DEBUG_PRINT_RANKS="0,1"  # Only ranks 0 and 1 print
 
 # Set model paths and output based on noise type
 if [ "$TRAIN_LOW_NOISE" = "1" ]; then
