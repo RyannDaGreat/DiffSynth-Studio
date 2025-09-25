@@ -135,7 +135,6 @@ icl ACCELERATE_ARGS
 icl COMMON_ARGS
 icl EXTRA_ARGS
 
-# High-noise LoRA
 accelerate launch \
   "${ACCELERATE_ARGS[@]}" \
   examples/wanvideo/model_training/train.py \
@@ -146,15 +145,6 @@ accelerate launch \
   --model_paths "$MODEL_PATHS" \
   --max_timestep_boundary $MAX_TIMESTEP \
   --min_timestep_boundary $MIN_TIMESTEP
-
-# # Low-noise LoRA
-# accelerate launch examples/wanvideo/model_training/train.py \
-#   "${COMMON_ARGS[@]}" \
-#   "${EXTRA_ARGS[@]}" \
-#   --output_path "./models/train/Wan2.2-I2V-A14B_low_noise_lora_""$PROJECT_NAME" \
-#   --model_paths "${LOW_NOISE_MODEL_PATHS}" \
-#   --max_timestep_boundary 1 \
-#   --min_timestep_boundary 0 \
 
 #DOCUMENTATION:
 #    options:
