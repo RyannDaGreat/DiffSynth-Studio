@@ -96,12 +96,12 @@ COMMON_ARGS=(
 # Set model paths and output based on noise type
 if [ "$TRAIN_LOW_NOISE" = "1" ]; then
   MODEL_PATHS="$LOW_NOISE_MODEL_PATHS"
-  OUTPUT_PATH="./models/train/Wan2.2-I2V-A14B_low_noise_lora$PROJECT_NAME"
+  OUTPUT_PATH="./models/train/Wan2.2-I2V-A14B_low_noise_lora_$PROJECT_NAME"
   MAX_TIMESTEP=1
   MIN_TIMESTEP=0
 else
   MODEL_PATHS="$HIGH_NOISE_MODEL_PATHS"
-  OUTPUT_PATH="./models/train/Wan2.2-I2V-A14B_high_noise_lora$PROJECT_NAME"
+  OUTPUT_PATH="./models/train/Wan2.2-I2V-A14B_high_noise_lora_$PROJECT_NAME"
   MAX_TIMESTEP=0.358
   MIN_TIMESTEP=0
 fi
