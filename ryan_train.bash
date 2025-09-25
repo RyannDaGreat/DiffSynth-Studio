@@ -48,6 +48,9 @@ DEBUG_PRINT_RANKS="all"
 # DEBUG_PRINT_RANKS="silent"
 # DEBUG_PRINT_RANKS="0"
 
+# Accelerate options
+USE_FSDP=0 USE_DEEPSPEED=0 MIXED_PRECISION="no"
+
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export CUDA_VISIBLE_DEVICES=0
 
@@ -63,6 +66,12 @@ DATASET_METADATA_PATH="data/envato_noisewarp_dataset/metadata.csv"
 DATASET_BASE_PATH="data/envato_noisewarp_dataset/Noisewarp"
 EXTRA_ARGS=(
   --use_warped_noise  # Uncomment to use pre-generated noise files instead of random noise
+)
+ACCELERATE_ARGS=(
+  #Comment out the ones you don't want to use
+  --use_fsdp #Fully Sharded Data Parallel
+  # --use_deepspeed #Idk what this does really...
+  --mixed_precision "yes"
 )
 
 COMMON_ARGS=(
@@ -92,11 +101,15 @@ ic HIGH_NOISE_MODEL_PATHS
 ic CUDA_VISIBLE_DEVICES
 ic DEBUG_PRINT_RANKS
 ic PROJECT_NAME
+ic USE_FSDP USE_DEEPSPEED MIXED_PRECISION
+echo -e "\033[1;32m[ic] ACCELERATE_ARGS=${ACCELERATE_ARGS[*]}\033[0m"
 echo -e "\033[1;32m[ic] COMMON_ARGS=${COMMON_ARGS[*]}\033[0m"
 echo -e "\033[1;32m[ic] EXTRA_ARGS=${EXTRA_ARGS[*]}\033[0m"
 
 # High-noise LoRA
-accelerate launch examples/wanvideo/model_training/train.py \
+accelerate launch \
+  "${ACCELERATE_ARGS[@]}" \
+  examples/wanvideo/model_training/train.py \
   "${COMMON_ARGS[@]}" \
   "${EXTRA_ARGS[@]}" \
   --output_path "./models/train/Wan2.2-I2V-A14B_high_noise_lora""$PROJECT_NAME" \
