@@ -10,6 +10,7 @@ rclone copy --progress --transfers 128  /root/CleanCode/Github/DiffSynth-Studio/
 #Icecream equivalent for bash
 # ic() { for v in "$@"; do echo "[ic] $v=${!v}"; done; }
 ic(){ for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
+icl(){ local name="$1"; local -n arr="$1"; echo -e "\033[1;32m[ic] $name:\033[0m"; printf "\033[1;32m  %s\033[0m\n" "${arr[@]}"; }
 
 
 #Custom model path locations
@@ -103,9 +104,9 @@ ic CUDA_VISIBLE_DEVICES
 ic DEBUG_PRINT_RANKS
 ic PROJECT_NAME
 ic USE_FSDP USE_DEEPSPEED MIXED_PRECISION
-echo -e "\033[1;32m[ic] ACCELERATE_ARGS=${ACCELERATE_ARGS[*]}\033[0m"
-echo -e "\033[1;32m[ic] COMMON_ARGS=${COMMON_ARGS[*]}\033[0m"
-echo -e "\033[1;32m[ic] EXTRA_ARGS=${EXTRA_ARGS[*]}\033[0m"
+icl ACCELERATE_ARGS
+icl COMMON_ARGS
+icl EXTRA_ARGS
 
 # High-noise LoRA
 accelerate launch \
