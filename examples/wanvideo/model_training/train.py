@@ -56,7 +56,6 @@ class WanTrainingModule(DiffusionTrainingModule):
         
         
     def forward_preprocess(self, data):
-        debug_print("WanTrainingModule.forward_preprocess: start")
         # CFG-sensitive parameters
         inputs_posi = {"prompt": data["prompt"]}
         inputs_nega = {}
@@ -104,9 +103,7 @@ class WanTrainingModule(DiffusionTrainingModule):
         
         # Pipeline units will automatically process the input parameters.
         for unit in self.pipe.units:
-            debug_print(f"WanTrainingModule.forward_preprocess: running unit {unit.__class__.__name__}")
             inputs_shared, inputs_posi, inputs_nega = self.pipe.unit_runner(unit, self.pipe, inputs_shared, inputs_posi, inputs_nega)
-        debug_print("WanTrainingModule.forward_preprocess: done")
         return {**inputs_shared, **inputs_posi}
     
     
