@@ -84,6 +84,7 @@ COMMON_ARGS=(
   --lora_rank 512
   --dataset_repeat 100
   --learning_rate 1e-4
+  --gradient_accumulation_steps 1
   --num_epochs 100
   --remove_prefix_in_ckpt pipe.dit.
   --lora_base_model dit
