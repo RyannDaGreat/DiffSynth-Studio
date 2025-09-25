@@ -31,3 +31,4 @@ data/WEB360_Video_Dataset/WEB360
 models/train
 untracked
 scratchpad.py
+.session.vim
