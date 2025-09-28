@@ -17,8 +17,9 @@ NUM_INFERENCE_STEPS=50
 SEED=42
 
 # Define LoRA checkpoints from rp call download_to_cache
-LORA_DIT=$( rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-4500.safetensors" --show_progress True)
-LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev/step-2750.safetensors" --show_progress True)
+LORA_DIT_PATH="models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev/step-12000.safetensors"
+LORA_DIT=$( rp call download_to_cache --- "$LORA_DIT_PATH" --show_progress True)
+LORA_DIT2=$(rp call download_to_cache --- "models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev/step-12000.safetensors" --show_progress True)
 
 # Choose the content
 PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs down from a tall tree, moving with feline agility and precision. The cat grips the rough bark with its claws, methodically placing each paw as it descends through the dappled sunlight filtering through green leaves. Its alert eyes scan the ground below while its fluffy tail sways for balance in this natural outdoor woodland setting"
@@ -29,11 +30,15 @@ INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video
 WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
 DEGRADATION_ALPHA=0  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=1  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
+# Extract checkpoint numbers from both LoRA paths
+CHECKPOINT_HIGH=$(echo "$LORA_DIT_PATH" | grep -o 'step-[0-9]*' | sed 's/step-//')
+CHECKPOINT_LOW=$(echo "models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev/step-12000.safetensors" | grep -o 'step-[0-9]*' | sed 's/step-//')
+
 # Generate output filename with parameters
-OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA}>.mp4"
+OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA},HI=${CHECKPOINT_HIGH},LO=${CHECKPOINT_LOW}>.mp4"
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
@@ -68,4 +73,3 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_process
     --degradation_alpha "$DEGRADATION_ALPHA"
 
 rp call fansi_print --- "OUTPUT = $OUTPUT" "green green bold italic on dark dark blue"
-
