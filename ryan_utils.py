@@ -10,7 +10,7 @@ import torch.distributed as dist
 
 def _get_rank_info():
     """Get current rank info, checking if distributed is initialized each time"""
-    if dist.is_available()
+    if dist.is_available():
         if dist.is_initialized():
             return dist.get_rank(), dist.get_world_size()
         else:
