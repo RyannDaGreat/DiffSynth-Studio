@@ -355,7 +355,7 @@ class WanVideoPipeline(BasePipeline):
             model_manager.load_model(
                 model_config.path,
                 device=model_config.offload_device or device,
-               eferch_dtype=model_config.offload_dtype or torch_dtype
+                torch_dtype=model_config.offload_dtype or torch_dtype
             )
         
         # Load models
