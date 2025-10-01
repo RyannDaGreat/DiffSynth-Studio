@@ -10,8 +10,11 @@ import torch.distributed as dist
 
 def _get_rank_info():
     """Get current rank info, checking if distributed is initialized each time"""
-    if dist.is_available() and dist.is_initialized():
-        return dist.get_rank(), dist.get_world_size()
+    if dist.is_available()
+        if dist.is_initialized():
+            return dist.get_rank(), dist.get_world_size()
+        else:
+            return "?", "?"
     return None, None
 
 # Global list of ranks that are allowed to print debug messages
@@ -53,7 +56,7 @@ def debug_print(*args, **kwargs):
     if current_rank is not None:
         prefix = f"[{timestamp}|R{current_rank}]"
     else:
-        prefix = f"[{timestamp}]"
+        prefix = f"[{timestamp}|?]"
 
     # Prepend prefix to the first argument
     if args:
