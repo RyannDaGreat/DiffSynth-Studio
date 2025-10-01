@@ -56,7 +56,7 @@ def debug_print(*args, **kwargs):
     if current_rank is not None:
         prefix = f"[{timestamp}|R{current_rank}]"
     else:
-        prefix = f"[{timestamp}|?]"
+        prefix = f"[{timestamp}|-]"
 
     # Prepend prefix to the first argument
     if args:

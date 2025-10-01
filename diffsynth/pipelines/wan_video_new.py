@@ -355,7 +355,7 @@ class WanVideoPipeline(BasePipeline):
             model_manager.load_model(
                 model_config.path,
                 device=model_config.offload_device or device,
-                torch_dtype=model_config.offload_dtype or torch_dtype
+               eferch_dtype=model_config.offload_dtype or torch_dtype
             )
         
         # Load models
@@ -570,8 +570,10 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
         shape = (1, pipe.vae.model.z_dim, length, height // pipe.vae.upsampling_factor, width // pipe.vae.upsampling_factor)
 
         if warped_noise is None:
+            debug_print_noise(f"Not using warped noise! Seed = {seed}")
             noise = pipe.generate_noise(shape, seed=seed, device=pipe.device)
         else:
+            debug_print_noise(f"Using warped noise...warped noise is type {type(warped_noise)} and seed={seed} and degradation_alpha={degradation_alpha} and shape={shape}")
             noise = self._process_noise_tensor(warped_noise, pipe, shape, degradation_alpha, seed)
 
         if vace_reference_image is not None:
@@ -587,6 +589,7 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
         B_expected, C_expected, T_expected, H_expected, W_expected = expected_shape
 
         if isinstance(warped_noise, str):
+            debug_print_noise("Loading noise from file: "+warped_noise)
             warped_noise = self._load_noise_file(warped_noise)
 
         noise = rearrange(warped_noise, 'T H W C -> T C H W')
@@ -599,11 +602,12 @@ class WanVideoUnit_NoiseInitializer(PipelineUnit):
 
         if degradation_alpha is None:
             degradation_alpha = pipe.generate_noise((1,), seed=seed, seed_shift=1).item()
+            debug_print_noise(f"Using random degradation alpha: {degradation_alpha} with seed={seed} and seed_shift=1")
 
         if degradation_alpha > 0:
             fresh_noise = pipe.generate_noise(expected_shape, seed=seed, device=pipe.device, seed_shift=0)
             noise = rp.git.CommonSource.noise_warp.blend_noise(noise, fresh_noise, degradation_alpha)
-            debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: applied degradation alpha {degradation_alpha}")
+            debug_print_noise_infer(f"WanVideoUnit_NoiseInitializer: applied degradation alpha {degradation_alpha} with seed={seed} and seed_shift=0")
 
         # Compare input vs output shapes to show transformation
         rp.validate_tensor_shapes(
