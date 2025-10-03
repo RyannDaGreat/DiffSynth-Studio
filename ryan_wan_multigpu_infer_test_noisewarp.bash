@@ -75,3 +75,6 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_process
     --degradation_alpha "$DEGRADATION_ALPHA"
 
 rp call fansi_print --- "OUTPUT = $OUTPUT" "green green bold italic on dark dark blue"
+rp call web_copy_path --- "$OUTPUT"
+rp call ntfy_send --- "WAN Inference Done! See $OUTPUT"
+
