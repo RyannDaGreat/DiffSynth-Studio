@@ -13,13 +13,17 @@ NUM_FRAMES=49
 HEIGHT=480
 WIDTH=832
 CFG_SCALE=5
-NUM_INFERENCE_STEPS=50
+NUM_INFERENCE_STEPS=25
 SEED=42
 
 # Define LoRA checkpoints from rp call download_to_cache
-STEP=250
-LORA_DIT_PATH="models/train/Wan2.2-I2V-A14B_high_noise_loraGWTF_Dev_Debug2/step-$STEP.safetensors"
-LORA_DIT2_PATH="models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev_Debug2/step-$STEP.safetensors"
+#STEP=2000
+#STEP=1250
+#STEP=500
+#NAME="Debug2" ; STEP=2000
+NAME="<LR=1e-5>" ; STEP=6750
+LORA_DIT_PATH="models/train/Wan2.2-I2V-A14B_high_noise_lora_GWTF_Dev_$NAME/step-$STEP.safetensors"
+LORA_DIT2_PATH="models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev_$NAME/step-$STEP.safetensors"
 LORA_DIT=$( rp call download_to_cache --- "$LORA_DIT_PATH" --show_progress True)
 LORA_DIT2=$(rp call download_to_cache --- "$LORA_DIT2_PATH" --show_progress True)
 
@@ -35,12 +39,14 @@ INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video
 # Custom noise file for warped noise
 WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
 DEGRADATION_ALPHA=0  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-#DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+DEGRADATION_ALPHA=.01  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+DEGRADATION_ALPHA=.6  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=1  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
 # Generate output filename with parameters
-OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA},HI=${CHECKPOINT_HIGH},LO=${CHECKPOINT_LOW}>.mp4"
+OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA},HI=${CHECKPOINT_HIGH},LO=${CHECKPOINT_LOW},NAME=${NAME}>.mp4"
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
