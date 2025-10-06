@@ -35,13 +35,17 @@ CHECKPOINT_LOW=$(echo "$LORA_DIT2_PATH" | grep -o 'step-[0-9]*' | sed 's/step-//
 PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs down from a tall tree, moving with feline agility and precision. The cat grips the rough bark with its claws, methodically placing each paw as it descends through the dappled sunlight filtering through green leaves. Its alert eyes scan the ground below while its fluffy tail sways for balance in this natural outdoor woodland setting"
 BASE_OUTPUT_NAME="cat_climbing_down_tree"
 INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832.png"
-
-# Custom noise file for warped noise
 WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
+
+PROMPT="A puppy looks at a butterfly curiously, its head moving from left to right as the butterfly flutters in the wind"
+WARPED_NOISE="test_noise_warpings/cut_and_drag_doggy_butterfly_480x832/noises.npy"  
+INPUT_IMAGE_PATH="test_noise_warpings/cut_and_drag_doggy_butterfly_480x832/first_frame.png"  
+BASE_OUTPUT_NAME="doggy_butterfly"
+
 DEGRADATION_ALPHA=0  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 DEGRADATION_ALPHA=.01  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-DEGRADATION_ALPHA=.6  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.6  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=1  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
@@ -83,4 +87,3 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch --num_process
 rp call fansi_print --- "OUTPUT = $OUTPUT" "green green bold italic on dark dark blue"
 rp call web_copy_path --- "$OUTPUT"
 rp call ntfy_send --- "WAN Inference Done! See $OUTPUT"
-
