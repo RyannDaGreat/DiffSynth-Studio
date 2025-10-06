@@ -599,12 +599,60 @@ def launch_training_task(
     optimizer = torch.optim.AdamW(model.trainable_modules(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer)
     dataloader = torch.utils.data.DataLoader(dataset, shuffle=True, collate_fn=lambda x: x[0], num_workers=num_workers)
+
+    # Auto-detect if using DeepSpeed from environment
+    import os
+    mixed_precision = None
+    deepspeed_plugin = None
+
+    # Check if we're using DeepSpeed via accelerate launch
+    if os.environ.get("ACCELERATE_USE_DEEPSPEED", "false").lower() == "true":
+        from accelerate import DeepSpeedPlugin
+
+        # Get config from environment variables set by ryan_train.bash
+        zero_stage = int(os.environ["DEEPSPEED_ZERO_STAGE"])
+        config_file = os.environ["DEEPSPEED_CONFIG_FILE"]
+
+        debug_print(f"[DeepSpeed] ZeRO-{zero_stage} | Config: {config_file} | grad_accum: {gradient_accumulation_steps}")
+
+        # Note: CPU offload disabled due to CUDA version mismatch
+        deepspeed_plugin = DeepSpeedPlugin(
+            zero_stage=zero_stage,
+            gradient_accumulation_steps=gradient_accumulation_steps,
+            gradient_clipping=1.0,
+            offload_optimizer_device="none",  # Disabled due to CUDA mismatch
+            offload_param_device="none",
+            zero3_init_flag=(zero_stage == 3),
+            zero3_save_16bit_model=True,
+        )
+        mixed_precision = "bf16"
+    else:
+        debug_print(f"[DDP Mode] Standard PyTorch DDP | grad_accum: {gradient_accumulation_steps}")
+        deepspeed_plugin = None
+        mixed_precision = None
+
     accelerator = Accelerator(
         gradient_accumulation_steps=gradient_accumulation_steps,
         kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=find_unused_parameters)],
+        mixed_precision=mixed_precision,
+        deepspeed_plugin=deepspeed_plugin,
     )
-    debug_print("launch_training_task: preparing accelerator")
+
+    debug_print(f"[Accelerator] Rank {accelerator.process_index}/{accelerator.num_processes} | Device: {accelerator.device} | Type: {accelerator.distributed_type}")
+
+    # Get memory stats before prepare
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        mem_before = torch.cuda.memory_allocated() / 1024**3
+        debug_print(f"[GPU Memory PRE] {mem_before:.1f}GB allocated")
+
     model, optimizer, dataloader, scheduler = accelerator.prepare(model, optimizer, dataloader, scheduler)
+
+    # Get memory stats after prepare
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        mem_after = torch.cuda.memory_allocated() / 1024**3
+        debug_print(f"[GPU Memory POST] {mem_after:.1f}GB allocated (Δ{mem_after - mem_before:+.1f}GB)")
     
     debug_print("launch_training_task: starting training loop")
     first_batch_saved = False

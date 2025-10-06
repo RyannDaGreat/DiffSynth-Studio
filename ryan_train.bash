@@ -42,7 +42,13 @@ LOW_NOISE_MODEL_PATHS='[
 
 
 export PYTHONUNBUFFERED=1 #Print Immediately
+export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True  # Avoid memory fragmentation
 
+# Enable DeepSpeed detection in our code
+export ACCELERATE_USE_DEEPSPEED=true
+export DEEPSPEED_ZERO_STAGE=2  # Change this to 3 if OOM
+export DEEPSPEED_CONFIG_FILE=deepspeed_config_optimal.json  # Change to deepspeed_config_zero3.json for ZeRO-3
 
 # Control debug printing ranks (all, silent, or comma-separated like 0,1,2)
 DEBUG_PRINT_RANKS="all"
@@ -59,7 +65,7 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 # EXTRA_ARGS=()
 
 #Project: GWTF-Test
-PROJECT_NAME="GWTF_Dev"
+PROJECT_NAME="GWTF_Dev_Deepspeed_<T=81>"
 DATASET_METADATA_PATH="data/envato_noisewarp_dataset/metadata.csv"
 DATASET_BASE_PATH="data/envato_noisewarp_dataset/Noisewarp"
 EXTRA_ARGS=(
@@ -67,11 +73,20 @@ EXTRA_ARGS=(
 )
 RESUME=0  # Set to 1 to resume from latest checkpoint
 TRAIN_LOW_NOISE=0  # Set to 1 to train low noise model instead of high noise
+
+# DeepSpeed configuration (permanently enabled)
 ACCELERATE_ARGS=(
-  #Comment out the ones you don't want to use
-  # --use_fsdp #Fully Sharded Data Parallel
-  # --use_deepspeed #Idk what this does really...
-  # --mixed_precision "yes"
+  # --config_file ~/.cache/huggingface/accelerate/default_config.yaml
+  --num_processes 8
+  --num_machines 1
+  --mixed_precision bf16
+  --deepspeed_config_file $DEEPSPEED_CONFIG_FILE
+  --zero_stage $DEEPSPEED_ZERO_STAGE 
+  --gradient_accumulation_steps 1
+  --gradient_clipping 1.0
+  --offload_optimizer_device cpu
+  --offload_param_device cpu
+  --deepspeed_multinode_launcher standard
 )
 
 COMMON_ARGS=(
@@ -79,11 +94,12 @@ COMMON_ARGS=(
   --dataset_metadata_path $DATASET_METADATA_PATH
   --height 480
   --width 832
-  --num_frames 49
+  # --num_frames 49
+  --num_frames 81
   --save_steps 250
   --lora_rank 512
   --dataset_repeat 100
-  --learning_rate 1e-4
+  --learning_rate 1e-5
   --gradient_accumulation_steps 1
   --num_epochs 100
   --remove_prefix_in_ckpt pipe.dit.
