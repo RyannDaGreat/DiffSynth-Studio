@@ -59,7 +59,7 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 # EXTRA_ARGS=()
 
 #Project: GWTF-Test
-PROJECT_NAME="GWTF_Dev"
+PROJECT_NAME="GWTF_Dev_Deepspeed_<T=81>"
 DATASET_METADATA_PATH="data/envato_noisewarp_dataset/metadata.csv"
 DATASET_BASE_PATH="data/envato_noisewarp_dataset/Noisewarp"
 EXTRA_ARGS=(
@@ -79,11 +79,12 @@ COMMON_ARGS=(
   --dataset_metadata_path $DATASET_METADATA_PATH
   --height 480
   --width 832
-  --num_frames 49
+  # --num_frames 49
+  --num_frames 81
   --save_steps 250
   --lora_rank 512
   --dataset_repeat 100
-  --learning_rate 1e-4
+  --learning_rate 1e-5
   --gradient_accumulation_steps 1
   --num_epochs 100
   --remove_prefix_in_ckpt pipe.dit.
