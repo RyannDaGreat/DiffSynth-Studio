@@ -104,3 +104,16 @@ test_noise_warpings/wan_gwtf_test__deg=0__steps=20__T=49.mp4
 doggy_butterfly_<480×832×49,CFG=5,N=25,S=42,D=.5,HI=6750,LO=6750,NAME=<LR=1e-5>>.mp4
 doggy_butterfly_<480×832×49,CFG=5,N=25,S=42,D=.6,HI=6750,LO=6750,NAME=<LR=1e-5>>.mp4
 doggy_butterfly.mp4
+test_noise_warpings/cat_off_tree_input_video_480x832_480p
+test_noise_warpings/corgi_cutanddrag_81f_480p_480x832
+test_noise_warpings/corgi_cutanddrag_81f_480p_480x832_copy
+cat_climbing_down_tree_<480×832×81,CFG=5,N=25,S=41,D=.5,HI=1250,LO=1250,NAME=Deepspeed_<T=81>>.mp4
+cat_climbing_down_tree_<480×832×81,CFG=5,N=25,S=42,D=.6,HI=1250,LO=1250,NAME=Deepspeed_<T=81>>.mp4
+cat_climbing_down_tree_<480×832×81,CFG=5,N=25,S=43,D=.5,HI=1250,LO=1250,NAME=Deepspeed_<T=81>>.mp4
+cat_off_tree_input_video_480x832_<480×832×81,CFG=5,N=10,S=41,D=.4,HI=1250,LO=1250,CP=Deepspeed_<T=81>>.mp4
+corgi_cutanddrag_81f_480p_<480×832×81,CFG=5,N=10,S=41,D=.3,HI=1750,LO=1750,CP=Deepspeed_<T=81>>.mp4
+corgi_cutanddrag_81f_480p_<480×832×81,CFG=5,N=10,S=41,D=.5,HI=1750,LO=1750,CP=Deepspeed_<T=81>>.mp4
+doggy_butterfly_<480×832×49,CFG=5,N=50,S=42,D=.5,HI=6750,LO=6750,NAME=<LR=1e-5>>.mp4
+doggy_butterfly_<480×832×49,CFG=5,N=50,S=43,D=.5,HI=6750,LO=6750,NAME=<LR=1e-5>>.mp4
+doggy_butterfly_<480×832×81,CFG=5,N=25,S=41,D=.4,HI=1250,LO=1250,NAME=Deepspeed_<T=81>>.mp4
+doggy_butterfly_<480×832×81,CFG=5,N=25,S=43,D=.5,HI=1000,LO=1000,NAME=Deepspeed_<T=81>>.mp4
