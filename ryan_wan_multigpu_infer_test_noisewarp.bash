@@ -13,17 +13,18 @@ NUM_FRAMES=49
 HEIGHT=480
 WIDTH=832
 CFG_SCALE=5
-NUM_INFERENCE_STEPS=25
-SEED=42
+NUM_INFERENCE_STEPS=10
+SEED=41
 
 # Define LoRA checkpoints from rp call download_to_cache
 #STEP=2000
 #STEP=1250
 #STEP=500
-#NAME="Debug2" ; STEP=2000
-NAME="<LR=1e-5>" ; STEP=6750
-LORA_DIT_PATH="models/train/Wan2.2-I2V-A14B_high_noise_lora_GWTF_Dev_$NAME/step-$STEP.safetensors"
-LORA_DIT2_PATH="models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev_$NAME/step-$STEP.safetensors"
+#CKPT_NAME="Debug2" ; STEP=2000
+CKPT_NAME="<LR=1e-5>" ; STEP=6750
+CKPT_NAME="Deepspeed_<T=81>" ; STEP=1750 ; NUM_FRAMES=81
+LORA_DIT_PATH="models/train/Wan2.2-I2V-A14B_high_noise_lora_GWTF_Dev_$CKPT_NAME/step-$STEP.safetensors"
+LORA_DIT2_PATH="models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev_$CKPT_NAME/step-$STEP.safetensors"
 LORA_DIT=$( rp call download_to_cache --- "$LORA_DIT_PATH" --show_progress True)
 LORA_DIT2=$(rp call download_to_cache --- "$LORA_DIT2_PATH" --show_progress True)
 
@@ -32,25 +33,38 @@ CHECKPOINT_HIGH=$(echo "$LORA_DIT_PATH" | grep -o 'step-[0-9]*' | sed 's/step-//
 CHECKPOINT_LOW=$(echo "$LORA_DIT2_PATH" | grep -o 'step-[0-9]*' | sed 's/step-//')
 
 # Choose the content
-PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs down from a tall tree, moving with feline agility and precision. The cat grips the rough bark with its claws, methodically placing each paw as it descends through the dappled sunlight filtering through green leaves. Its alert eyes scan the ground below while its fluffy tail sways for balance in this natural outdoor woodland setting"
-BASE_OUTPUT_NAME="cat_climbing_down_tree"
-INPUT_IMAGE_PATH="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832.png"
-WARPED_NOISE="/root/CleanCode/Sandbox/wan_gwtf_test/cat_off_tree_input_video_480x832/noises.npy"  # Shape: (49, 60, 104, 16) = (T, H, W, C)
 
-PROMPT="A puppy looks at a butterfly curiously, its head moving from left to right as the butterfly flutters in the wind"
-WARPED_NOISE="test_noise_warpings/cut_and_drag_doggy_butterfly_480x832/noises.npy"  
-INPUT_IMAGE_PATH="test_noise_warpings/cut_and_drag_doggy_butterfly_480x832/first_frame.png"  
-BASE_OUTPUT_NAME="doggy_butterfly"
+#CAT CLIMBS DOWN TREE
+PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs down from a tall tree, moving with feline agility and precision. The cat grips the rough bark with its claws, methodically placing each paw as it descends through the dappled sunlight filtering through green leaves. Its alert eyes scan the ground below while its fluffy tail sways for balance in this natural outdoor woodland setting"
+NAME="cat_off_tree_input_video_480x832"
+
+# #DOG WATCHES BUTTERFLY
+# PROMPT="A puppy looks at a butterfly curiously, its head moving from left to right as the butterfly flutters in the wind"
+# NAME='doggy_butterfly'
+
+#CORGI BARKS
+PROMPT="A happy Corgi sits indoors, looking directly at the camera with bright, eager eyes. It opens and closes its mouth twice, letting out two  slow-motion cheerful barks. The dog’s expression stays joyful, radiating playful energy"
+NAME="corgi_cutanddrag_81f_480p"
 
 DEGRADATION_ALPHA=0  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 DEGRADATION_ALPHA=.01  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+DEGRADATION_ALPHA=.3  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.4  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=.6  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=1  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
+#Calculate warped noise if we haven't already
+NOISEWARPS_ROOT="test_noise_warpings"
+INPUT_VIDEO_PATH="$NOISEWARPS_ROOT/$NAME.mp4"
+NOISEWARP_FOLDER="${NOISEWARPS_ROOT}/${NAME}_480x832"
+INPUT_IMAGE_PATH="$NOISEWARP_FOLDER/first_frame.png"  
+WARPED_NOISE="$NOISEWARP_FOLDER/noises.npy"  
+python test_noise_warpings/noise_warper.py "$INPUT_VIDEO_PATH" "$NOISEWARP_FOLDER"
+
 # Generate output filename with parameters
-OUTPUT="${BASE_OUTPUT_NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA},HI=${CHECKPOINT_HIGH},LO=${CHECKPOINT_LOW},NAME=${NAME}>.mp4"
+OUTPUT="${NAME}_<${HEIGHT}×${WIDTH}×${NUM_FRAMES},CFG=${CFG_SCALE},N=${NUM_INFERENCE_STEPS},S=${SEED},D=${DEGRADATION_ALPHA},HI=${CHECKPOINT_HIGH},LO=${CHECKPOINT_LOW},CP=${CKPT_NAME}>.mp4"
 OUTPUT=$(rp call get_unique_copy_path --- "$OUTPUT")
 INPUT_IMAGE_PATH=$(rp call download_to_cache --- "$INPUT_IMAGE_PATH")
 
