@@ -9,20 +9,20 @@ rclone copy --progress --transfers 128 /root/CleanCode/Github/DiffSynth-Studio/h
 ic() { for v in "$@"; do echo -e "\033[1;32m[ic] $v=${!v}\033[0m"; done; }
 
 # Video parameters
-NUM_FRAMES=49
+NUM_FRAMES=81
 HEIGHT=480
 WIDTH=832
 CFG_SCALE=5
-NUM_INFERENCE_STEPS=10
-SEED=41
+NUM_INFERENCE_STEPS=20
+SEED=49
 
 # Define LoRA checkpoints from rp call download_to_cache
 #STEP=2000
 #STEP=1250
 #STEP=500
 #CKPT_NAME="Debug2" ; STEP=2000
-CKPT_NAME="<LR=1e-5>" ; STEP=6750
-CKPT_NAME="Deepspeed_<T=81>" ; STEP=1750 ; NUM_FRAMES=81
+CKPT_NAME="<LR=1e-5>" ; STEP=6500
+CKPT_NAME="Deepspeed_<T=81>" ; STEP=7750 ; NUM_FRAMES=81
 LORA_DIT_PATH="models/train/Wan2.2-I2V-A14B_high_noise_lora_GWTF_Dev_$CKPT_NAME/step-$STEP.safetensors"
 LORA_DIT2_PATH="models/train/Wan2.2-I2V-A14B_low_noise_lora_GWTF_Dev_$CKPT_NAME/step-$STEP.safetensors"
 LORA_DIT=$( rp call download_to_cache --- "$LORA_DIT_PATH" --show_progress True)
@@ -39,20 +39,32 @@ PROMPT="A graceful tabby cat with distinctive striped markings carefully climbs 
 NAME="cat_off_tree_input_video_480x832"
 
 # #DOG WATCHES BUTTERFLY
-# PROMPT="A puppy looks at a butterfly curiously, its head moving from left to right as the butterfly flutters in the wind"
-# NAME='doggy_butterfly'
+#PROMPT="A puppy looks at a butterfly curiously, its head moving from left to right as the butterfly flutters in the wind"
+#NAME='doggy_butterfly'
 
 #CORGI BARKS
 PROMPT="A happy Corgi sits indoors, looking directly at the camera with bright, eager eyes. It opens and closes its mouth twice, letting out two  slow-motion cheerful barks. The dog’s expression stays joyful, radiating playful energy"
 NAME="corgi_cutanddrag_81f_480p"
 
+#DUCK IN WHITE BATHTUB
+#PROMPT="A bright yellow rubber duck with an expressive face and a red beak bobs and sways from side to side in a white bathtub filled with light blue water and bubbles. As it moves, it pushes the bubbles around, causing small splashes of soapy water to spill over the tub's edge. The scene is set in a modern bathroom, highlighted by a sleek chrome faucet and a minimalist design, creating a playful and clean atmosphere. The duck's playful movement adds a whimsical touch to the setting."
+#NAME='duck_splash_vid'
+
+#PROMPT='A smooth, slow camera movement through a static normal map visualization of an office room. The view gently glides forward, almost as if zooming in slightly, revealing surfaces colored in vibrant RGB tones representing surface normals — reds, greens, and blues. The motion feels calm and steady, highlighting the 3D structure and orientation of every surface in this stylized, color-coded environment.'
+#NAME='camera_normals_vis2'
+
+#PROMPT='A smooth, slow camera movement through a static albedo map visualization of an office room. The view gently glides forward, almost as if zooming in slightly.'
+#NAME='olats_albedo_vis'
+
 DEGRADATION_ALPHA=0  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 DEGRADATION_ALPHA=.01  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 DEGRADATION_ALPHA=.3  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-#DEGRADATION_ALPHA=.4  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-#DEGRADATION_ALPHA=.5  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+DEGRADATION_ALPHA=.4  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+DEGRADATION_ALPHA=.5'  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=.6  # 0 = pure custom noise, 1 = pure random, unset = random alpha
-#DEGRADATION_ALPHA=.75  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.65  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.70  # 0 = pure custom noise, 1 = pure random, unset = random alpha
+#DEGRADATION_ALPHA=.80  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 #DEGRADATION_ALPHA=1  # 0 = pure custom noise, 1 = pure random, unset = random alpha
 
 #Calculate warped noise if we haven't already
