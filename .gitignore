@@ -140,3 +140,5 @@ cat_off_tree_input_video_480x832.png
 
 !test_noise_warpings/noise_warper.py
 !test_noise_warpings/make_warped_noise.py
+merge_models_test
+merged_lora_test.safetensors
