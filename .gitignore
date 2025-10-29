@@ -135,5 +135,8 @@ test_noise_warpings/duck-in-a-bath_480x832/visualization_images
 ./*.mp4
 
 output_mp4s
-test_noise_warpings
+test_noise_warpings/*
 cat_off_tree_input_video_480x832.png
+
+!test_noise_warpings/noise_warper.py
+!test_noise_warpings/make_warped_noise.py
